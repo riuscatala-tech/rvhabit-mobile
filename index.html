@@ -590,7 +590,7 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
     <button class="btn-primary success" onclick="saveExp()">💾 Desar expedient actual</button>
     <button class="btn-primary amber" onclick="exportLib()">⬇ Exportar còpia (.rvhabit)</button>
     <button class="btn-primary muted" onclick="document.getElementById('import-file').click()">⬆ Importar biblioteca</button>
-    <input type="file" id="import-file" accept=".rvhabit,.json" style="display:none" onchange="importLib(event)">
+    <input type="file" id="import-file" accept=".rvhabit,.json,application/json,*/*" style="display:none" onchange="importLib(event)">
     <button class="btn-primary muted sm" onclick="newExp()">➕ Nou expedient</button>
 
     <div style="height:16px;"></div>
