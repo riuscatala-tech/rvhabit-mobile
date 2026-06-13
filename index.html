@@ -555,24 +555,18 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
 
   <!-- PANEL: GENERAR -->
   <div class="panel" id="panel-generar">
-    <div class="panel-title">Generar</div>
-    <div class="panel-sub">Genera i desa els PDFs</div>
+    <div class="panel-title">Resum i documents</div>
+    <div class="panel-sub">Resum de l'expedient i documents rebuts a la visita</div>
 
     <div class="form-card" id="preview-card">
-      <div class="form-card-title">📋 Resum</div>
+      <div class="form-card-title">📋 Resum de l'expedient</div>
       <div id="preview-content" style="font-size:13px;color:var(--muted);">Omple les dades per veure el resum.</div>
     </div>
 
-    <button class="btn-primary" onclick="genAll()">⬇ Generar els 3 PDFs</button>
-    <button class="btn-primary amber" onclick="genCert()">📄 Només Certificat</button>
-    <button class="btn-primary muted" onclick="genFotos()">📷 Només Fotografies</button>
-    <button class="btn-primary muted" onclick="genPlanol()">🗺️ Només Plànol</button>
-
-    <div style="height:16px;"></div>
+    <div class="tip">💡 Els PDFs es generen al Mac un cop importat l'expedient. Aquí pots adjuntar documents rebuts a la visita.</div>
 
     <div class="form-card">
-      <div class="form-card-title">📎 Documents adjunts</div>
-      <div class="tip" style="margin-bottom:12px;">Adjunta els PDFs un cop firmats amb AutoFirma</div>
+      <div class="form-card-title">📎 Documents rebuts a la visita</div>
       <div id="docs-slots"></div>
     </div>
   </div>
@@ -618,8 +612,8 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
     <div class="nav-badge"></div>
   </button>
   <button class="nav-btn" id="nav-generar" onclick="showPanel('generar');buildPreview()">
-    <span class="icon">📄</span>
-    <span>Generar</span>
+    <span class="icon">📋</span>
+    <span>Resum</span>
     <div class="nav-badge"></div>
   </button>
   <button class="nav-btn" id="nav-bib" onclick="showPanel('bib');renderLib()">
@@ -1251,13 +1245,19 @@ async function saveExp() {
   const id = _expId || Date.now();
   _expId = id;
   const idx = lib.findIndex(e => e.id === id);
-  const entry = { id, data, savedAt: new Date().toLocaleDateString('ca-ES'), updatedAt: new Date().toISOString() };
+  // Incloure fotos, plànol i documents a l'entry
+  const entry = {
+    id, data,
+    photos: photoDataURLs,
+    planol: planolDataURL,
+    docs: docAttachments,
+    savedAt: new Date().toLocaleDateString('ca-ES'),
+    updatedAt: new Date().toISOString()
+  };
   if (idx >= 0) { lib[idx] = entry; } else { lib.unshift(entry); }
   setLib(lib.slice(0,100));
   savePhotosToStorage();
   autoSave();
-  // Exportar automàticament
-  await syncToFile(lib);
   showToast('✓ Expedient desat', 'success');
   renderLib();
 }
@@ -1288,6 +1288,7 @@ function loadExp(id) {
   if (!entry) return;
   _expId = id;
   fillData(entry.data);
+
   // Netejar fotos actuals
   photoDataURLs = [null,null,null,null];
   planolDataURL = null;
@@ -1298,8 +1299,28 @@ function loadExp(id) {
   });
   const pa = document.getElementById('planol-upload');
   if(pa){pa.classList.remove('has-image');pa.innerHTML='<span style="font-size:32px;opacity:0.3;">🗺️</span><div style="font-size:13px;color:var(--muted);font-weight:600;">Toca per afegir el plànol</div><input type="file" accept="image/*" onchange="loadPlanol(event)" style="position:absolute;inset:0;opacity:0;width:100%;height:100%;z-index:2;">';}
-  // Carregar fotos
-  loadPhotosFromStorage(id);
+
+  // Restaurar fotos des de l'entry
+  if (entry.photos) {
+    photoDataURLs = entry.photos;
+    entry.photos.forEach((p, i) => { if (p) renderPhotoSlot(i, p); });
+  }
+  // Restaurar plànol
+  if (entry.planol) {
+    planolDataURL = entry.planol;
+    const area = document.getElementById('planol-upload');
+    if(area){
+      area.classList.add('has-image');
+      area.innerHTML = `<img src="${entry.planol}"><div style="font-size:11px;color:var(--success);margin-top:8px;font-weight:600;">✓ Plànol carregat</div><input type="file" accept="image/*" onchange="loadPlanol(event)" style="position:absolute;inset:0;opacity:0;width:100%;height:100%;z-index:2;">`;
+    }
+  }
+  // Restaurar documents adjunts
+  if (entry.docs) {
+    docAttachments = { ...docAttachments, ...entry.docs };
+    renderDocSlots();
+  }
+
+  savePhotosToStorage();
   autoSave();
   showToast('✓ Expedient carregat', 'success');
   showPanel('sol');
@@ -1340,8 +1361,17 @@ async function syncToFile(lib) {
 async function exportLib() {
   const lib = getLib();
   if (!lib.length) { showToast('⚠ Cap expedient per exportar', 'error'); return; }
+  showToast('Preparant exportació...', '');
   const dateStr = new Date().toISOString().split('T')[0];
-  const content = JSON.stringify({ app:'RVHabit', version:'1.0-mobile', exportedAt:new Date().toISOString(), count:lib.length, expedients:lib }, null, 2);
+  // Les fotos, plànol i docs ja estan dins cada entry de la biblioteca
+  const payload = {
+    app: 'RVHabit',
+    version: '1.0-mobile',
+    exportedAt: new Date().toISOString(),
+    count: lib.length,
+    expedients: lib  // inclou photos, planol i docs
+  };
+  const content = JSON.stringify(payload);
   const blob = new Blob([content], {type:'application/json'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -1349,7 +1379,7 @@ async function exportLib() {
   a.download = `RVHabit_Mobile_${dateStr}.rvhabit`;
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   URL.revokeObjectURL(url);
-  showToast('✓ Biblioteca exportada', 'success');
+  showToast('✓ Biblioteca exportada amb fotos i documents', 'success');
 }
 
 function importLib(event) {
@@ -1363,10 +1393,19 @@ function importLib(event) {
       const current = getLib();
       const existingIds = new Set(current.map(e => e.id));
       const toAdd = payload.expedients.filter(e => !existingIds.has(e.id));
-      const merged = [...toAdd, ...current].slice(0, 100);
+      const toUpdate = payload.expedients.filter(e => existingIds.has(e.id));
+      // Actualitzar els que ja existeixen (per si s'han afegit fotos)
+      const updatedLib = current.map(cur => {
+        const updated = toUpdate.find(u => u.id === cur.id);
+        return updated ? { ...cur, ...updated } : cur;
+      });
+      const merged = [...toAdd, ...updatedLib].slice(0, 100);
       setLib(merged);
       renderLib();
-      showToast(`✓ Importats ${toAdd.length} expedients`, 'success');
+      const msg = toAdd.length > 0
+        ? `✓ Importats ${toAdd.length} expedients nous`
+        : `✓ Biblioteca actualitzada (${toUpdate.length} expedients)`;
+      showToast(msg, 'success');
     } catch(err) { showToast('⚠ Error: ' + err.message, 'error'); }
   };
   reader.readAsText(file);
