@@ -1246,11 +1246,18 @@ async function saveExp() {
   _expId = id;
   const idx = lib.findIndex(e => e.id === id);
   // Incloure fotos, plànol i documents a l'entry
+  // Preparar docs amb base64 per exportació
+  const docsForExport = {};
+  for (const [key, doc] of Object.entries(docAttachments)) {
+    if (doc && doc.base64) {
+      docsForExport[key] = { name: doc.name, size: doc.size, base64: doc.base64, onDisk: false };
+    }
+  }
   const entry = {
     id, data,
-    photos: photoDataURLs,
-    planol: planolDataURL,
-    docs: docAttachments,
+    photos: photoDataURLs.filter(Boolean).length ? photoDataURLs : undefined,
+    planol: planolDataURL || undefined,
+    docs: Object.keys(docsForExport).length ? docsForExport : undefined,
     savedAt: new Date().toLocaleDateString('ca-ES'),
     updatedAt: new Date().toISOString()
   };
@@ -1372,7 +1379,7 @@ async function exportLib() {
     expedients: lib  // inclou photos, planol i docs
   };
   const content = JSON.stringify(payload);
-  const blob = new Blob([content], {type:'application/json'});
+  const blob = new Blob([content], {type:'application/octet-stream'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
