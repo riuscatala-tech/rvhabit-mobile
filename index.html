@@ -1235,9 +1235,80 @@ async function genAll() {
 // ═══════════════════════
 const LIB_KEY = 'rvhabit_mobile_lib';
 
-function getLib() { try { return JSON.parse(localStorage.getItem(LIB_KEY)||'[]'); } catch(e){return[];} }
-function setLib(lib) { localStorage.setItem(LIB_KEY, JSON.stringify(lib)); }
+// ─── Biblioteca en memòria (carregada de Synology) ───
+let _synologyLib = null; // biblioteca completa carregada
 
+function getLib() {
+  // Prioritat: biblioteca de Synology > localStorage
+  if (_synologyLib) return _synologyLib;
+  try { return JSON.parse(localStorage.getItem(LIB_KEY)||'[]'); } catch(e){return[];}
+}
+function setLib(lib) {
+  _synologyLib = lib;
+  try { localStorage.setItem(LIB_KEY, JSON.stringify(lib)); } catch(e) {}
+}
+
+// ─── CARREGAR DE SYNOLOGY ───
+function carregarDeSynology(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const payload = JSON.parse(e.target.result);
+      if (!payload.expedients) { showToast('⚠ Fitxer no vàlid', 'error'); return; }
+      _synologyLib = payload.expedients;
+      try { localStorage.setItem(LIB_KEY, JSON.stringify(_synologyLib)); } catch(ex) {}
+      setSyncStatus('ok', `✅ Carregat: ${_synologyLib.length} expedients de "${file.name}"`);
+      document.getElementById('btn-desar-synology').style.display = 'block';
+      renderLib();
+      showToast(`✓ ${_synologyLib.length} expedients carregats`, 'success');
+    } catch(err) { showToast('⚠ Error llegint el fitxer: ' + err.message, 'error'); }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+// ─── DESAR A SYNOLOGY ───
+async function desarASynology() {
+  const lib = getLib();
+  if (!lib.length) { showToast('⚠ No hi ha expedients per desar', 'error'); return; }
+  showToast('Preparant fitxer...', '');
+  await new Promise(r => setTimeout(r, 100));
+
+  const payload = JSON.stringify({
+    app: 'RVHabit',
+    version: '1.0',
+    exportedAt: new Date().toISOString(),
+    count: lib.length,
+    expedients: lib  // inclou photos, planol i docs
+  });
+
+  const blob = new Blob([payload], {type: 'application/octet-stream'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'RVHabit_Biblioteca.rvhabit';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+
+  setSyncStatus('ok', `✅ Fitxer generat — desa'l sobre l'original a la Synology`);
+  showToast('✓ Fitxer generat — sobreescriu el de la Synology', 'success');
+}
+
+function setSyncStatus(type, text) {
+  const box = document.getElementById('sync-status-box');
+  if (!box) return;
+  box.style.display = 'block';
+  const colors = { ok:'#f0faf5', warn:'#fff8e1', err:'#fff0f0' };
+  box.style.background = colors[type] || colors.warn;
+  box.style.color = type==='ok' ? 'var(--success)' : type==='err' ? 'var(--danger)' : '#8a6000';
+  box.textContent = text;
+}
+
+// ─── DESAR EXPEDIENT ───
 async function saveExp() {
   const data = collectData();
   if (!data.sol_nom) { showToast('⚠ Introdueix el nom del sol·licitant', 'error'); return; }
@@ -1245,27 +1316,31 @@ async function saveExp() {
   const id = _expId || Date.now();
   _expId = id;
   const idx = lib.findIndex(e => e.id === id);
-  // Incloure fotos, plànol i documents a l'entry
-  // Preparar docs amb base64 per exportació
+
+  // Preparar docs amb base64
   const docsForExport = {};
   for (const [key, doc] of Object.entries(docAttachments)) {
     if (doc && doc.base64) {
       docsForExport[key] = { name: doc.name, size: doc.size, base64: doc.base64, onDisk: false };
     }
   }
+
   const entry = {
     id, data,
-    photos: photoDataURLs.filter(Boolean).length ? photoDataURLs : undefined,
+    photos: photoDataURLs.some(Boolean) ? photoDataURLs : undefined,
     planol: planolDataURL || undefined,
     docs: Object.keys(docsForExport).length ? docsForExport : undefined,
     savedAt: new Date().toLocaleDateString('ca-ES'),
     updatedAt: new Date().toISOString()
   };
+
   if (idx >= 0) { lib[idx] = entry; } else { lib.unshift(entry); }
-  setLib(lib.slice(0,100));
+  setLib(lib.slice(0, 100));
   savePhotosToStorage();
   autoSave();
-  showToast('✓ Expedient desat', 'success');
+  document.getElementById('btn-desar-synology').style.display = 'block';
+  setSyncStatus('warn', '⚠ Expedient desat localment — recorda desar a Synology');
+  showToast('✓ Expedient desat — ara desa a Synology', 'success');
   renderLib();
 }
 
@@ -1273,10 +1348,12 @@ function renderLib() {
   const lib = getLib();
   const container = document.getElementById('lib-list');
   if (!lib.length) {
-    container.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:8px 0;">Cap expedient desat.</div>';
+    container.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:8px 0;">Cap expedient. Carrega la biblioteca de la Synology.</div>';
     return;
   }
-  container.innerHTML = lib.map(e => `
+  container.innerHTML = `
+    <div style="font-size:11px;color:var(--muted);margin-bottom:10px;font-weight:600;">${lib.length} EXPEDIENT${lib.length!==1?'S':''}</div>
+    ${lib.map(e => `
     <div class="exp-card">
       <div class="exp-card-info">
         <div class="exp-card-num">${e.data.num_expedient||'—'}</div>
@@ -1287,7 +1364,7 @@ function renderLib() {
         <div class="exp-card-date">${e.savedAt}</div>
         <button class="btn-load-exp" onclick="loadExp(${e.id})">Carregar</button>
       </div>
-    </div>`).join('');
+    </div>`).join('')}`;
 }
 
 function loadExp(id) {
@@ -1296,7 +1373,7 @@ function loadExp(id) {
   _expId = id;
   fillData(entry.data);
 
-  // Netejar fotos actuals
+  // Netejar UI fotos
   photoDataURLs = [null,null,null,null];
   planolDataURL = null;
   [0,1,2,3].forEach(i => {
@@ -1307,10 +1384,12 @@ function loadExp(id) {
   const pa = document.getElementById('planol-upload');
   if(pa){pa.classList.remove('has-image');pa.innerHTML='<span style="font-size:32px;opacity:0.3;">🗺️</span><div style="font-size:13px;color:var(--muted);font-weight:600;">Toca per afegir el plànol</div><input type="file" accept="image/*" onchange="loadPlanol(event)" style="position:absolute;inset:0;opacity:0;width:100%;height:100%;z-index:2;">';}
 
-  // Restaurar fotos des de l'entry
+  // Restaurar fotos
   if (entry.photos) {
     photoDataURLs = entry.photos;
     entry.photos.forEach((p, i) => { if (p) renderPhotoSlot(i, p); });
+  } else {
+    loadPhotosFromStorage(id);
   }
   // Restaurar plànol
   if (entry.planol) {
@@ -1323,7 +1402,9 @@ function loadExp(id) {
   }
   // Restaurar documents adjunts
   if (entry.docs) {
-    docAttachments = { ...docAttachments, ...entry.docs };
+    for (const [key, doc] of Object.entries(entry.docs)) {
+      if (doc) docAttachments[key] = doc;
+    }
     renderDocSlots();
   }
 
@@ -1338,14 +1419,12 @@ function newExp() {
   photoDataURLs = [null,null,null,null];
   planolDataURL = null;
   docAttachments = { certificat:null,fotografies:null,planol:null,escriptura:null,factura:null,cedula:null };
-  // Reset form
   ['sol_nom','sol_dni','sol_tel','sol_dom','sol_mun','sol_email','ed_mun','ed_carrer','ed_cp',
    'ed_catastral','ed_bloc','ed_escala','ed_pis','ed_porta','num_places','num_expedient'
   ].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
   document.getElementById('desti_us').value = 'HABITATGE';
   document.getElementById('rep_data').value = new Date().toISOString().split('T')[0];
   document.getElementById('headerExp').textContent = 'Nou expedient';
-  // Reset fotos UI
   [0,1,2,3].forEach(i => {
     const slot=document.getElementById(`ps-${i}`);
     const labels=['Principal','Foto 2','Foto 3','Foto 4'];
@@ -1353,80 +1432,21 @@ function newExp() {
   });
   renderDocSlots();
   localStorage.removeItem('rvhabit_mobile_draft');
+  document.getElementById('btn-desar-synology').style.display = 'block';
+  setSyncStatus('warn', '⚠ Nou expedient — recorda desar a Synology quan acabis');
   showToast('Nou expedient creat');
   showPanel('sol');
 }
 
-// ═══════════════════════
-//  SYNC — Exportar a fitxer .rvhabit per compartir amb desktop
-// ═══════════════════════
-async function syncToFile(lib) {
-  // Exportar automàticament la biblioteca com a fitxer descarregable
-  // L'usuari pot moure'l a la carpeta de la Synology manualment
-}
-
-async function exportLib() {
-  const lib = getLib();
-  if (!lib.length) { showToast('⚠ Cap expedient per exportar', 'error'); return; }
-  showToast('Preparant exportació...', '');
-  const dateStr = new Date().toISOString().split('T')[0];
-  // Les fotos, plànol i docs ja estan dins cada entry de la biblioteca
-  const payload = {
-    app: 'RVHabit',
-    version: '1.0-mobile',
-    exportedAt: new Date().toISOString(),
-    count: lib.length,
-    expedients: lib  // inclou photos, planol i docs
-  };
-  const content = JSON.stringify(payload);
-  const blob = new Blob([content], {type:'application/octet-stream'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `RVHabit_Mobile_${dateStr}.rvhabit`;
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-  showToast('✓ Biblioteca exportada amb fotos i documents', 'success');
-}
-
-function importLib(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    try {
-      const payload = JSON.parse(e.target.result);
-      if (!payload.expedients) { showToast('⚠ Fitxer no vàlid', 'error'); return; }
-      const current = getLib();
-      const existingIds = new Set(current.map(e => e.id));
-      const toAdd = payload.expedients.filter(e => !existingIds.has(e.id));
-      const toUpdate = payload.expedients.filter(e => existingIds.has(e.id));
-      // Actualitzar els que ja existeixen (per si s'han afegit fotos)
-      const updatedLib = current.map(cur => {
-        const updated = toUpdate.find(u => u.id === cur.id);
-        return updated ? { ...cur, ...updated } : cur;
-      });
-      const merged = [...toAdd, ...updatedLib].slice(0, 100);
-      setLib(merged);
-      renderLib();
-      const msg = toAdd.length > 0
-        ? `✓ Importats ${toAdd.length} expedients nous`
-        : `✓ Biblioteca actualitzada (${toUpdate.length} expedients)`;
-      showToast(msg, 'success');
-    } catch(err) { showToast('⚠ Error: ' + err.message, 'error'); }
-  };
-  reader.readAsText(file);
-  event.target.value = '';
-}
-
-// ═══════════════════════
-//  SYNC STATUS (placeholder)
-// ═══════════════════════
 function initSync() {
-  const dot = document.getElementById('sync-dot');
-  const txt = document.getElementById('sync-text');
-  dot.className = 'sync-dot warn';
-  txt.textContent = 'Mode mòbil — exporta per sincronitzar amb el Mac';
+  // Carregar biblioteca local si existeix
+  const localLib = (() => { try { return JSON.parse(localStorage.getItem(LIB_KEY)||'[]'); } catch(e){return[];} })();
+  if (localLib.length) {
+    _synologyLib = localLib;
+    setSyncStatus('warn', `⚠ ${localLib.length} expedients en memòria local — carrega de Synology per actualitzar`);
+    document.getElementById('btn-desar-synology').style.display = 'block';
+    renderLib();
+  }
 }
 </script>
 </body>
