@@ -629,8 +629,11 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
 // ═══════════════════════
 //  PWA SETUP
 // ═══════════════════════
+// Eliminar service workers antics
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('./sw.js').catch(() => {});
+  navigator.serviceWorker.getRegistrations().then(regs => {
+    regs.forEach(r => r.unregister());
+  });
 }
 
 // ═══════════════════════
