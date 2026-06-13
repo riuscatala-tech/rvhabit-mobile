@@ -1,0 +1,1480 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="RVHabit">
+<meta name="theme-color" content="#1a3a5c">
+<title>RVHabit Mobile</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root {
+  --bg: #f5f3ee;
+  --surface: #ffffff;
+  --border: #d8d3c8;
+  --accent: #1a3a5c;
+  --accent2: #c8860a;
+  --text: #1c1c1c;
+  --muted: #6b6560;
+  --success: #2d6a4f;
+  --danger: #9b2335;
+  --input-bg: #fafaf7;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; overflow: hidden; font-family: -apple-system, 'SF Pro Text', sans-serif; background: var(--bg); color: var(--text); }
+
+/* ── HEADER ── */
+.header {
+  background: var(--accent);
+  color: white;
+  padding: calc(var(--safe-top) + 12px) 16px 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 3px solid var(--accent2);
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 100;
+}
+.header-logo { font-size: 18px; font-weight: 700; letter-spacing: -0.5px; }
+.header-logo span { color: var(--accent2); }
+.header-exp {
+  margin-left: auto;
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: white;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── BOTTOM NAV ── */
+.bottom-nav {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  display: flex;
+  padding-bottom: var(--safe-bottom);
+  z-index: 100;
+}
+.nav-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 4px;
+  gap: 3px;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 10px;
+  font-family: inherit;
+  transition: color 0.15s;
+  position: relative;
+}
+.nav-btn.active { color: var(--accent); }
+.nav-btn .icon { font-size: 22px; line-height: 1; }
+.nav-badge {
+  position: absolute;
+  top: 4px; right: calc(50% - 18px);
+  background: var(--success);
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  display: none;
+}
+.nav-btn.filled .nav-badge { display: block; }
+
+/* ── MAIN CONTENT ── */
+.main {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.page-content {
+  padding-top: calc(var(--safe-top) + 72px);
+  padding-bottom: calc(var(--safe-bottom) + 70px);
+  min-height: 100%;
+}
+
+/* ── PANELS ── */
+.panel { display: none; padding: 16px; }
+.panel.active { display: block; }
+
+.panel-title { font-size: 22px; font-weight: 700; color: var(--accent); margin-bottom: 4px; }
+.panel-sub { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
+
+/* ── FORM ── */
+.form-card {
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+  border: 1px solid var(--border);
+}
+.form-card-title {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 14px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--accent);
+}
+.field { margin-bottom: 14px; }
+.field:last-child { margin-bottom: 0; }
+label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  margin-bottom: 5px;
+}
+input[type="text"], input[type="email"], input[type="tel"], input[type="date"],
+input[type="number"], select, textarea {
+  width: 100%;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 11px 12px;
+  font-family: inherit;
+  font-size: 15px;
+  color: var(--text);
+  -webkit-appearance: none;
+  appearance: none;
+}
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: white;
+}
+textarea { resize: none; min-height: 80px; }
+select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M0 0l6 8 6-8z' fill='%236b6560'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px; }
+
+.radio-group { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.radio-item {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 14px;
+  flex: 1; min-width: 100px;
+  transition: all 0.15s;
+}
+.radio-item input { accent-color: var(--accent); width: 16px; height: 16px; }
+.radio-item:has(input:checked) { background: #e8f0f8; border-color: var(--accent); color: var(--accent); font-weight: 600; }
+
+/* ── FOTOS ── */
+.photo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.photo-slot {
+  border: 2px dashed var(--border);
+  border-radius: 12px;
+  aspect-ratio: 4/3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  background: var(--input-bg);
+  transition: all 0.2s;
+}
+.photo-slot.has-photo { border-style: solid; border-color: var(--success); }
+.photo-slot img { width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0; }
+.photo-slot .slot-icon { font-size: 28px; opacity: 0.35; z-index: 1; }
+.photo-slot .slot-label { font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; z-index: 1; }
+.photo-slot input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; z-index: 2; }
+.photo-slot .btn-del-photo {
+  position: absolute; top: 6px; right: 6px;
+  background: var(--danger); color: white;
+  border: none; border-radius: 50%;
+  width: 24px; height: 24px;
+  font-size: 12px; cursor: pointer;
+  display: none; align-items: center; justify-content: center;
+  z-index: 3;
+}
+.photo-slot.has-photo .btn-del-photo { display: flex; }
+
+/* ── PLANOL ── */
+.planol-upload {
+  border: 2px dashed var(--border);
+  border-radius: 12px;
+  padding: 24px 16px;
+  text-align: center;
+  cursor: pointer;
+  position: relative;
+  background: var(--input-bg);
+  min-height: 140px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+}
+.planol-upload.has-image { border-style: solid; border-color: var(--success); }
+.planol-upload img { max-width: 100%; max-height: 200px; object-fit: contain; border-radius: 8px; }
+.planol-upload input { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; z-index: 2; }
+
+/* ── BUTTONS ── */
+.btn-primary {
+  width: 100%;
+  background: var(--accent);
+  color: white;
+  border: none;
+  padding: 14px;
+  border-radius: 12px;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  margin-bottom: 10px;
+  transition: all 0.2s;
+}
+.btn-primary:active { opacity: 0.8; transform: scale(0.98); }
+.btn-primary.success { background: var(--success); }
+.btn-primary.amber { background: var(--accent2); }
+.btn-primary.muted { background: #5a6e82; }
+.btn-primary.sm { padding: 10px; font-size: 13px; }
+
+/* ── BIBLIOTECA ── */
+.exp-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  display: flex; align-items: center; gap: 12px;
+}
+.exp-card-info { flex: 1; min-width: 0; }
+.exp-card-num { font-size: 12px; font-weight: 700; color: var(--accent); }
+.exp-card-nom { font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.exp-card-adr { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.exp-card-date { font-size: 11px; color: var(--muted); flex-shrink: 0; }
+.btn-load-exp {
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* ── SYNC STATUS ── */
+.sync-bar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 14px;
+  background: #f0faf5;
+  border-radius: 8px;
+  margin-bottom: 14px;
+  font-size: 12px;
+  color: var(--success);
+}
+.sync-dot { width: 8px; height: 8px; border-radius: 50%; background: #888; flex-shrink: 0; }
+.sync-dot.ok { background: var(--success); }
+.sync-dot.warn { background: #ff9800; }
+.sync-dot.err { background: var(--danger); }
+
+/* ── TOAST ── */
+.toast {
+  position: fixed;
+  bottom: calc(var(--safe-bottom) + 75px);
+  left: 16px; right: 16px;
+  background: var(--accent);
+  color: white;
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+  transform: translateY(40px);
+  opacity: 0;
+  transition: all 0.3s;
+  z-index: 200;
+  text-align: center;
+}
+.toast.show { transform: translateY(0); opacity: 1; }
+.toast.error { background: var(--danger); }
+.toast.success { background: var(--success); }
+
+/* ── DOC SLOTS ── */
+.doc-slot {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 8px;
+  background: var(--input-bg);
+}
+.doc-slot.attached { border-color: var(--success); background: #f0faf5; }
+.doc-icon { font-size: 20px; flex-shrink: 0; }
+.doc-info { flex: 1; min-width: 0; }
+.doc-name { font-size: 13px; font-weight: 600; }
+.doc-status { font-size: 11px; color: var(--muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.doc-slot.attached .doc-status { color: var(--success); font-weight: 600; }
+.btn-doc-attach {
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 7px;
+  padding: 7px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  flex-shrink: 0;
+  position: relative;
+}
+.btn-doc-attach input { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; }
+
+/* ── TIP ── */
+.tip {
+  background: #e8f0f8;
+  border-left: 3px solid var(--accent);
+  padding: 10px 14px;
+  border-radius: 0 8px 8px 0;
+  font-size: 12px;
+  color: var(--accent);
+  margin-bottom: 16px;
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header">
+  <div class="header-logo">RV<span>Habit</span></div>
+  <div style="font-size:10px;opacity:0.7;letter-spacing:1px;">MÒBIL</div>
+  <div class="header-exp" id="headerExp">Nou expedient</div>
+</header>
+
+<!-- MAIN SCROLL AREA -->
+<div class="main">
+<div class="page-content">
+
+  <!-- PANEL: SOL·LICITANT -->
+  <div class="panel active" id="panel-sol">
+    <div class="panel-title">Sol·licitant</div>
+    <div class="panel-sub">Dades del propietari i del tècnic</div>
+
+    <div class="form-card">
+      <div class="form-card-title">👤 Sol·licitant</div>
+      <div class="field">
+        <label>Nom i cognoms</label>
+        <input type="text" id="sol_nom" placeholder="Nom complet" oninput="autoSave();updateHeader()">
+      </div>
+      <div class="field">
+        <label>DNI / NIE / CIF</label>
+        <input type="text" id="sol_dni" placeholder="12345678A" oninput="autoSave()">
+      </div>
+      <div class="field">
+        <label>Telèfon</label>
+        <input type="tel" id="sol_tel" placeholder="+34 600 000 000" oninput="autoSave()">
+      </div>
+      <div class="field">
+        <label>Domicili</label>
+        <input type="text" id="sol_dom" placeholder="Carrer, número..." oninput="autoSave()">
+      </div>
+      <div class="field">
+        <label>Municipi</label>
+        <input type="text" id="sol_mun" placeholder="Campos" oninput="autoSave()">
+      </div>
+      <div class="field">
+        <label>Correu electrònic</label>
+        <input type="email" id="sol_email" placeholder="correu@example.com" oninput="autoSave()">
+      </div>
+      <div class="field">
+        <label>Actua com a</label>
+        <div class="radio-group">
+          <label class="radio-item"><input type="radio" name="sol_rol" value="Propietari" checked oninput="autoSave()"> Propietari</label>
+          <label class="radio-item"><input type="radio" name="sol_rol" value="Inquilí" oninput="autoSave()"> Inquilí</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-card">
+      <div class="form-card-title">🏛️ Representant (Tècnic)</div>
+      <div class="field">
+        <label>Nom</label>
+        <input type="text" id="rep_nom" value="Pere Rius Català" oninput="autoSave()">
+      </div>
+      <div class="field">
+        <label>Núm. col·legiat</label>
+        <input type="text" id="rep_numcol" value="18773-9" oninput="autoSave()">
+      </div>
+      <div class="field">
+        <label>Data del certificat</label>
+        <input type="date" id="rep_data" oninput="autoSave()">
+      </div>
+      <div class="field">
+        <label>Núm. expedient</label>
+        <input type="text" id="num_expedient" placeholder="2026/001" oninput="autoSave();updateHeader()">
+      </div>
+    </div>
+  </div>
+
+  <!-- PANEL: EDIFICI -->
+  <div class="panel" id="panel-edifici">
+    <div class="panel-title">Edifici</div>
+    <div class="panel-sub">Ubicació i identificació de l'immoble</div>
+
+    <div class="form-card">
+      <div class="form-card-title">📍 Situació</div>
+      <div class="field">
+        <label>Municipi</label>
+        <input type="text" id="ed_mun" placeholder="Campos" oninput="autoSave()">
+      </div>
+      <div class="field">
+        <label>Carrer o plaça</label>
+        <input type="text" id="ed_carrer" placeholder="Carrer..." oninput="autoSave()">
+      </div>
+      <div class="field">
+        <label>Codi postal</label>
+        <input type="text" id="ed_cp" placeholder="07630" oninput="autoSave()">
+      </div>
+      <div class="field">
+        <label>Referència cadastral</label>
+        <input type="text" id="ed_catastral" placeholder="2145108ED..." oninput="autoSave()">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div class="field">
+          <label>Bloc</label>
+          <input type="text" id="ed_bloc" placeholder="—" oninput="autoSave()">
+        </div>
+        <div class="field">
+          <label>Escala</label>
+          <input type="text" id="ed_escala" placeholder="—" oninput="autoSave()">
+        </div>
+        <div class="field">
+          <label>Pis</label>
+          <input type="text" id="ed_pis" placeholder="1" oninput="autoSave()">
+        </div>
+        <div class="field">
+          <label>Porta</label>
+          <input type="text" id="ed_porta" placeholder="—" oninput="autoSave()">
+        </div>
+      </div>
+    </div>
+
+    <div class="form-card">
+      <div class="form-card-title">🏘️ Tipus</div>
+      <div class="field">
+        <label>Tipus de cèdula</label>
+        <div class="radio-group">
+          <label class="radio-item"><input type="radio" name="tipus_cedula" value="Primera ocupació" oninput="autoSave()"> Primera ocupació</label>
+          <label class="radio-item"><input type="radio" name="tipus_cedula" value="Renovació" checked oninput="autoSave()"> Renovació</label>
+          <label class="radio-item"><input type="radio" name="tipus_cedula" value="Carència" oninput="autoSave()"> Carència</label>
+        </div>
+      </div>
+      <div class="field">
+        <label>Tipus d'immoble</label>
+        <div class="radio-group">
+          <label class="radio-item"><input type="radio" name="tipus_immoble" value="Habitatge" checked oninput="autoSave()"> Habitatge</label>
+          <label class="radio-item"><input type="radio" name="tipus_immoble" value="Local" oninput="autoSave()"> Local</label>
+          <label class="radio-item"><input type="radio" name="tipus_immoble" value="Edifici residencial no habitatge" oninput="autoSave()"> Edifici residencial</label>
+        </div>
+      </div>
+      <div class="field">
+        <label>Nº places / Capacitat màxima</label>
+        <input type="number" id="num_places" placeholder="4" min="1" oninput="autoSave()">
+      </div>
+      <div class="field">
+        <label>Destí / Ús</label>
+        <input type="text" id="desti_us" value="HABITATGE" oninput="autoSave()">
+      </div>
+    </div>
+  </div>
+
+  <!-- PANEL: FOTOS -->
+  <div class="panel" id="panel-fotos">
+    <div class="panel-title">Fotografies</div>
+    <div class="panel-sub">Fins a 4 fotos de la façana</div>
+
+    <div class="tip">📸 Fes clic a cada requadre per obrir la càmera o la galeria</div>
+
+    <div class="photo-grid">
+      <div class="photo-slot" id="ps-0">
+        <span class="slot-icon">📷</span>
+        <span class="slot-label">Principal</span>
+        <input type="file" accept="image/*" capture="environment" onchange="loadPhoto(event,0)">
+        <button class="btn-del-photo" onclick="removePhoto(event,0)">✕</button>
+      </div>
+      <div class="photo-slot" id="ps-1">
+        <span class="slot-icon">📷</span>
+        <span class="slot-label">Foto 2</span>
+        <input type="file" accept="image/*" capture="environment" onchange="loadPhoto(event,1)">
+        <button class="btn-del-photo" onclick="removePhoto(event,1)">✕</button>
+      </div>
+      <div class="photo-slot" id="ps-2">
+        <span class="slot-icon">📷</span>
+        <span class="slot-label">Foto 3</span>
+        <input type="file" accept="image/*" capture="environment" onchange="loadPhoto(event,2)">
+        <button class="btn-del-photo" onclick="removePhoto(event,2)">✕</button>
+      </div>
+      <div class="photo-slot" id="ps-3">
+        <span class="slot-icon">📷</span>
+        <span class="slot-label">Foto 4</span>
+        <input type="file" accept="image/*" capture="environment" onchange="loadPhoto(event,3)">
+        <button class="btn-del-photo" onclick="removePhoto(event,3)">✕</button>
+      </div>
+    </div>
+
+    <div style="height:16px;"></div>
+
+    <div class="form-card">
+      <div class="form-card-title">🗺️ Plànol de situació</div>
+      <div class="planol-upload" id="planol-upload">
+        <span style="font-size:32px;opacity:0.3;">🗺️</span>
+        <div style="font-size:13px;color:var(--muted);font-weight:600;">Toca per afegir el plànol</div>
+        <div style="font-size:11px;color:var(--muted);">Captura de pantalla o imatge</div>
+        <input type="file" accept="image/*" onchange="loadPlanol(event)">
+      </div>
+    </div>
+  </div>
+
+  <!-- PANEL: GENERAR -->
+  <div class="panel" id="panel-generar">
+    <div class="panel-title">Resum i documents</div>
+    <div class="panel-sub">Resum de l'expedient i documents rebuts a la visita</div>
+
+    <div class="form-card" id="preview-card">
+      <div class="form-card-title">📋 Resum de l'expedient</div>
+      <div id="preview-content" style="font-size:13px;color:var(--muted);">Omple les dades per veure el resum.</div>
+    </div>
+
+    <div class="tip">💡 Els PDFs es generen al Mac un cop importat l'expedient. Aquí pots adjuntar documents rebuts a la visita.</div>
+
+    <div class="form-card">
+      <div class="form-card-title">📎 Documents rebuts a la visita</div>
+      <div id="docs-slots"></div>
+    </div>
+  </div>
+
+  <!-- PANEL: BIBLIOTECA -->
+  <div class="panel" id="panel-bib">
+    <div class="panel-title">Biblioteca</div>
+    <div class="panel-sub">Sincronitza amb la Synology</div>
+
+    <div class="tip">
+      📋 <strong>Flux:</strong><br>
+      1. <strong>"📂 Carregar"</strong> → tria <code>RVHabit_Biblioteca.rvhabit</code><br>
+      2. Treballa: dades + fotos<br>
+      3. <strong>"💾 Desar"</strong> → sobreescriu el fitxer a la Synology
+    </div>
+
+    <button class="btn-primary success" style="font-size:17px;padding:18px;" onclick="document.getElementById('synology-file').click()">
+      📂 Carregar de Synology
+    </button>
+    <input type="file" id="synology-file" accept=".rvhabit,.json,*/*" style="display:none" onchange="carregarDeSynology(event)">
+
+    <div id="sync-status-box" style="display:none; padding:12px 14px; border-radius:8px; margin-bottom:12px; font-size:13px; text-align:center;"></div>
+
+    <button class="btn-primary amber" style="font-size:17px;padding:18px;" onclick="desarASynology()" id="btn-desar-synology">
+      💾 Desar a Synology
+    </button>
+
+    <button class="btn-primary muted sm" onclick="saveExp()">💾 Desar expedient (local)</button>
+    <button class="btn-primary muted sm" onclick="newExp()">➕ Nou expedient</button>
+
+    <div style="height:16px;"></div>
+    <div id="lib-list"><div style="color:var(--muted);font-size:13px;padding:8px 0;">Cap expedient. Carrega de Synology.</div></div>
+  </div>
+</div><!-- /page-content -->
+</div><!-- /main -->
+
+<!-- BOTTOM NAV -->
+<nav class="bottom-nav">
+  <button class="nav-btn active" id="nav-sol" onclick="showPanel('sol')">
+    <span class="icon">👤</span>
+    <span>Sol·licitant</span>
+    <div class="nav-badge"></div>
+  </button>
+  <button class="nav-btn" id="nav-edifici" onclick="showPanel('edifici')">
+    <span class="icon">🏠</span>
+    <span>Edifici</span>
+    <div class="nav-badge"></div>
+  </button>
+  <button class="nav-btn" id="nav-fotos" onclick="showPanel('fotos')">
+    <span class="icon">📷</span>
+    <span>Fotos</span>
+    <div class="nav-badge"></div>
+  </button>
+  <button class="nav-btn" id="nav-generar" onclick="showPanel('generar');buildPreview()">
+    <span class="icon">📋</span>
+    <span>Resum</span>
+    <div class="nav-badge"></div>
+  </button>
+  <button class="nav-btn" id="nav-bib" onclick="showPanel('bib');renderLib()">
+    <span class="icon">📚</span>
+    <span>Biblioteca</span>
+    <div class="nav-badge"></div>
+  </button>
+</nav>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════
+//  PWA SETUP
+// ═══════════════════════
+// Eliminar service workers antics
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(regs => {
+    regs.forEach(r => r.unregister());
+  });
+}
+
+// ═══════════════════════
+//  STATE
+// ═══════════════════════
+let photoDataURLs = [null,null,null,null];
+let planolDataURL = null;
+let _expId = null;
+let docAttachments = { certificat:null, fotografies:null, planol:null, escriptura:null, factura:null, cedula:null };
+
+const DOC_LABELS = {
+  certificat:  "Certificat d'Habitabilitat (firmat)",
+  fotografies: 'Fotografies de Façana (firmat)',
+  planol:      'Plànol de Situació (firmat)',
+  escriptura:  'Escriptura de propietat',
+  factura:     'Certificat / Factura subministrament',
+  cedula:      "Cèdula d'Habitabilitat concedida",
+};
+const DOC_ICONS = { certificat:'📄', fotografies:'📷', planol:'🗺️', escriptura:'🏛️', factura:'⚡', cedula:'✅' };
+
+// Init date and doc slots
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('rep_data').value = new Date().toISOString().split('T')[0];
+  renderDocSlots();
+  loadDraft();
+  initSync();
+});
+
+// ═══════════════════════
+//  NAVIGATION
+// ═══════════════════════
+function showPanel(name) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  document.getElementById('nav-' + name).classList.add('active');
+  // Scroll to top
+  document.querySelector('.main').scrollTo(0, 0);
+}
+
+// ═══════════════════════
+//  HELPERS
+// ═══════════════════════
+function v(id) { return (document.getElementById(id)?.value || '').trim(); }
+function chk(name) { return document.querySelector(`input[name="${name}"]:checked`)?.value || ''; }
+function dash(val) { return (val && val.trim()) ? val.trim() : '----------'; }
+
+function fmtDate(iso) {
+  if (!iso) return { dia:'__', mes:'______', any:'____' };
+  const mesos = ['gener','febrer','març','abril','maig','juny','juliol','agost','setembre','octubre','novembre','desembre'];
+  const d = new Date(iso + 'T12:00:00');
+  return { dia: String(d.getDate()).padStart(2,'0'), mes: mesos[d.getMonth()], any: String(d.getFullYear()) };
+}
+
+function showToast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + type;
+  setTimeout(() => t.className = 'toast', 3000);
+}
+
+function updateHeader() {
+  const num = v('num_expedient');
+  const nom = v('sol_nom');
+  let badge = 'Nou expedient';
+  if (num && nom) badge = `${num} — ${nom}`;
+  else if (num) badge = `Exp. ${num}`;
+  else if (nom) badge = nom;
+  document.getElementById('headerExp').textContent = badge;
+}
+
+function collectData() {
+  return {
+    num_expedient: v('num_expedient'),
+    sol_nom: v('sol_nom'), sol_dni: v('sol_dni'), sol_tel: v('sol_tel'),
+    sol_dom: v('sol_dom'), sol_mun: v('sol_mun'), sol_email: v('sol_email'),
+    sol_rol: chk('sol_rol'),
+    rep_nom: v('rep_nom'), rep_numcol: v('rep_numcol'), rep_data: v('rep_data'),
+    rep_titol: 'Arquitecte', rep_col: 'Arquitectes (COAIB)',
+    ed_mun: v('ed_mun'), ed_loc: v('ed_mun'), ed_cp: v('ed_cp'),
+    ed_catastral: v('ed_catastral'), ed_carrer: v('ed_carrer'),
+    ed_bloc: v('ed_bloc'), ed_escala: v('ed_escala'), ed_pis: v('ed_pis'), ed_porta: v('ed_porta'),
+    ed_barri: '', ed_num: '',
+    tipus_cedula: chk('tipus_cedula'),
+    tipus_immoble: chk('tipus_immoble'),
+    num_places: v('num_places'), desti_us: v('desti_us'),
+  };
+}
+
+function fillData(d) {
+  const fields = ['num_expedient','sol_nom','sol_dni','sol_tel','sol_dom','sol_mun','sol_email',
+    'rep_nom','rep_numcol','rep_data','ed_mun','ed_cp','ed_catastral','ed_carrer',
+    'ed_bloc','ed_escala','ed_pis','ed_porta','num_places','desti_us'];
+  fields.forEach(k => { const el = document.getElementById(k); if (el && d[k]) el.value = d[k]; });
+  ['sol_rol','tipus_cedula','tipus_immoble'].forEach(name => {
+    const r = document.querySelector(`input[name="${name}"][value="${d[name]}"]`);
+    if (r) r.checked = true;
+  });
+  updateHeader();
+}
+
+// ═══════════════════════
+//  AUTOSAVE
+// ═══════════════════════
+function autoSave() {
+  try {
+    localStorage.setItem('rvhabit_mobile_draft', JSON.stringify({ data: collectData(), expId: _expId }));
+  } catch(e) {}
+  updateNavBadges();
+}
+
+function loadDraft() {
+  const raw = localStorage.getItem('rvhabit_mobile_draft');
+  if (!raw) return;
+  try {
+    const saved = JSON.parse(raw);
+    if (saved.data) fillData(saved.data);
+    if (saved.expId) _expId = saved.expId;
+    // Carregar fotos des del localStorage
+    loadPhotosFromStorage(_expId);
+  } catch(e) {}
+}
+
+function updateNavBadges() {
+  const checks = {
+    sol: !!(v('sol_nom') && v('sol_dni')),
+    edifici: !!(v('ed_mun') && v('ed_carrer')),
+    fotos: photoDataURLs.some(Boolean) || !!planolDataURL,
+  };
+  Object.entries(checks).forEach(([k, ok]) => {
+    document.getElementById('nav-' + k)?.classList.toggle('filled', ok);
+  });
+}
+
+// ═══════════════════════
+//  FOTOS
+// ═══════════════════════
+async function compressImage(dataURL, maxDim=1000, quality=0.75) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      let w = img.width, h = img.height;
+      if (w > maxDim || h > maxDim) {
+        if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
+        else { w = Math.round(w * maxDim / h); h = maxDim; }
+      }
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = () => resolve(dataURL);
+    img.src = dataURL;
+  });
+}
+
+function loadPhoto(event, i) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async e => {
+    const compressed = await compressImage(e.target.result, 1000, 0.75);
+    photoDataURLs[i] = compressed;
+    renderPhotoSlot(i, compressed);
+    savePhotosToStorage();
+    updateNavBadges();
+    showToast('✓ Foto afegida', 'success');
+  };
+  reader.readAsDataURL(file);
+}
+
+function removePhoto(event, i) {
+  event.stopPropagation();
+  photoDataURLs[i] = null;
+  const slot = document.getElementById(`ps-${i}`);
+  const labels = ['Principal','Foto 2','Foto 3','Foto 4'];
+  slot.classList.remove('has-photo');
+  slot.innerHTML = `<span class="slot-icon">📷</span><span class="slot-label">${labels[i]}</span>
+    <input type="file" accept="image/*" capture="environment" onchange="loadPhoto(event,${i})">
+    <button class="btn-del-photo" onclick="removePhoto(event,${i})">✕</button>`;
+  savePhotosToStorage();
+  updateNavBadges();
+}
+
+function renderPhotoSlot(i, dataURL) {
+  const slot = document.getElementById(`ps-${i}`);
+  slot.classList.add('has-photo');
+  const labels = ['Principal','Foto 2','Foto 3','Foto 4'];
+  slot.innerHTML = `<img src="${dataURL}">
+    <input type="file" accept="image/*" capture="environment" onchange="loadPhoto(event,${i})" style="z-index:2;">
+    <button class="btn-del-photo" onclick="removePhoto(event,${i})">✕</button>`;
+}
+
+function loadPlanol(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async e => {
+    const compressed = await compressImage(e.target.result, 1400, 0.80);
+    planolDataURL = compressed;
+    const area = document.getElementById('planol-upload');
+    area.classList.add('has-image');
+    area.innerHTML = `<img src="${compressed}">
+      <div style="font-size:11px;color:var(--success);margin-top:8px;font-weight:600;">✓ Plànol carregat</div>
+      <input type="file" accept="image/*" onchange="loadPlanol(event)" style="position:absolute;inset:0;opacity:0;width:100%;height:100%;z-index:2;">`;
+    savePhotosToStorage();
+    updateNavBadges();
+    showToast('✓ Plànol afegit', 'success');
+  };
+  reader.readAsDataURL(file);
+}
+
+function savePhotosToStorage() {
+  if (!_expId) return;
+  try {
+    localStorage.setItem(`rvhabit_mobile_imgs_${_expId}`, JSON.stringify({ photos: photoDataURLs, planol: planolDataURL }));
+  } catch(e) {}
+}
+
+function loadPhotosFromStorage(id) {
+  if (!id) return;
+  try {
+    const raw = localStorage.getItem(`rvhabit_mobile_imgs_${id}`);
+    if (!raw) return;
+    const saved = JSON.parse(raw);
+    if (saved.photos) {
+      photoDataURLs = saved.photos;
+      photoDataURLs.forEach((p, i) => { if (p) renderPhotoSlot(i, p); });
+    }
+    if (saved.planol) {
+      planolDataURL = saved.planol;
+      const area = document.getElementById('planol-upload');
+      area.classList.add('has-image');
+      area.innerHTML = `<img src="${saved.planol}">
+        <div style="font-size:11px;color:var(--success);margin-top:8px;font-weight:600;">✓ Plànol carregat</div>
+        <input type="file" accept="image/*" onchange="loadPlanol(event)" style="position:absolute;inset:0;opacity:0;width:100%;height:100%;z-index:2;">`;
+    }
+  } catch(e) {}
+  updateNavBadges();
+}
+
+// ═══════════════════════
+//  DOC SLOTS
+// ═══════════════════════
+function renderDocSlots() {
+  const container = document.getElementById('docs-slots');
+  container.innerHTML = Object.entries(DOC_LABELS).map(([key, label]) => `
+    <div class="doc-slot ${docAttachments[key] ? 'attached' : ''}" id="docslot-${key}">
+      <span class="doc-icon">${DOC_ICONS[key]}</span>
+      <div class="doc-info">
+        <div class="doc-name">${label}</div>
+        <div class="doc-status" id="docstatus-${key}">${docAttachments[key] ? '✓ ' + docAttachments[key].name : 'Pendent'}</div>
+      </div>
+      ${docAttachments[key] ? `<button class="btn-doc-attach" style="background:var(--success);margin-right:4px;" onclick="obrirDoc('${key}')">👁</button>` : ''}
+      <label class="btn-doc-attach">PDF
+        <input type="file" accept=".pdf" onchange="attachDoc(event,'${key}')">
+      </label>
+    </div>`).join('');
+}
+
+function obrirDoc(key) {
+  const doc = docAttachments[key];
+  if (!doc || !doc.base64) { showToast('⚠ Document no disponible', 'error'); return; }
+  try {
+    const b64 = doc.base64.includes(',') ? doc.base64.split(',')[1] : doc.base64;
+    const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+    const blob = new Blob([bytes], {type:'application/pdf'});
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
+  } catch(e) {
+    showToast('⚠ No es pot obrir: ' + e.message, 'error');
+  }
+}
+
+function attachDoc(event, key) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    docAttachments[key] = { name: file.name, size: file.size, base64: e.target.result };
+    renderDocSlots();
+    showToast(`✓ ${file.name} adjuntat`, 'success');
+  };
+  reader.readAsDataURL(file);
+  event.target.value = '';
+}
+
+// ═══════════════════════
+//  PREVIEW
+// ═══════════════════════
+function buildPreview() {
+  const d = collectData();
+  const dt = fmtDate(d.rep_data);
+  const html = `
+    <div style="font-size:12px;line-height:1.8;">
+      <b>Expedient:</b> ${d.num_expedient || '—'}<br>
+      <b>Sol·licitant:</b> ${d.sol_nom || '—'}<br>
+      <b>Immoble:</b> ${d.ed_carrer || '—'}, ${d.ed_mun || '—'}<br>
+      <b>Tipus:</b> ${d.tipus_cedula || '—'} — ${d.tipus_immoble || '—'}<br>
+      <b>Places:</b> ${d.num_places || '—'}<br>
+      <b>Data:</b> ${dt.dia} de ${dt.mes} de ${dt.any}<br>
+      <b>Fotos:</b> ${photoDataURLs.filter(Boolean).length}/4 · Plànol: ${planolDataURL ? '✓' : '✗'}
+    </div>`;
+  document.getElementById('preview-content').innerHTML = html;
+}
+
+// ═══════════════════════
+//  PDF GENERATION (jsPDF)
+// ═══════════════════════
+const { jsPDF } = window.jspdf;
+
+function getImgFmt(dataURL) {
+  if (dataURL.startsWith('data:image/png')) return 'PNG';
+  return 'JPEG';
+}
+
+function genCertPDF() {
+  const doc = new jsPDF({ unit:'mm', format:'a4' });
+  const d = collectData();
+  const dt = fmtDate(d.rep_data);
+  const tc = d.tipus_cedula || '';
+  const ti = d.tipus_immoble || '';
+  const M = 55, R = 555, W = R - M;
+
+  function txt(x, y, t, opts={}) { doc.text(t, x, y, { lineBreak:false, ...opts }); }
+  function dotline(x1, y, x2) { doc.moveTo(x1,y).lineTo(x2,y).lineWidth(0.3).dash(1,{space:2}).stroke().undash(); }
+
+  // Text vertical esquerra
+  doc.save();
+  doc.font && doc.setFont('Helvetica');
+  doc.setFontSize(6).fillColor && doc.setTextColor(0);
+  doc.translate(14,820).rotate(-90);
+  doc.text('Este Certificado carece de validez sin el sello correspondiente. / Aquest Certificat careix de validesa sense el segell corresponent.',0,0,{lineBreak:false});
+  doc.restore();
+  doc.moveTo(22,25).lineTo(22,825).lineWidth(0.3).stroke();
+
+  // Títol
+  doc.setFont('Helvetica-Bold').setFontSize(17).setTextColor(0);
+  txt(M,28,'CERTIFICADO DE HABITABILIDAD');
+  doc.setFont('Helvetica-BoldOblique').setFontSize(13).setTextColor(50,50,50);
+  txt(M,48,"CERTIFICAT D'HABITABILITAT");
+  doc.setTextColor(0);
+
+  // Checkboxes Renovació/Carència
+  const bx=395;
+  doc.setLineWidth(0.5);
+  [[bx,30,tc==='Renovació','RENOVACIÓN','RENOVACIÓ'],[bx,48,tc==='Carència','CARENCIA','MANCANÇA']].forEach(([x,y,chk,l1,l2])=>{
+    doc.rect(x,y,8,8).stroke();
+    if(chk){doc.setFont('Helvetica-Bold').setFontSize(8);txt(x+1.5,y+0.8,'X');}
+    doc.setFont('Helvetica-Bold').setFontSize(7.5);txt(x+12,y+0.5,l1);
+    doc.setFont('Helvetica-BoldOblique').setFontSize(7);txt(x+12,y+8,l2);
+  });
+
+  doc.moveTo(M,66).lineTo(R,66).lineWidth(0.5).stroke();
+  let y=74;
+
+  doc.setFont('Helvetica').setFontSize(8.5);txt(M,y,'Sr./Sra.');
+  doc.setFont('Helvetica-Bold');txt(M+40,y,d.rep_nom||'');
+  dotline(M+38,y+9,R);y+=16;
+
+  doc.setFont('Helvetica').setFontSize(7.5);txt(M,y,'poseedor/a del Título de');
+  doc.setFont('Helvetica-Oblique').setFontSize(7);txt(M,y+9,'posseïdor/a del Títol');
+  doc.setFont('Helvetica-Bold').setFontSize(8);txt(M+135,y+3,d.rep_titol||'Arquitecte');
+  dotline(M+133,y+12,R);y+=22;
+
+  doc.setFont('Helvetica').setFontSize(7.5);txt(M,y,'miembro del Colegio de');
+  doc.setFont('Helvetica-Oblique').setFontSize(7);txt(M,y+9,'membre del Col·legi de');
+  doc.setFont('Helvetica-Bold').setFontSize(8);txt(M+122,y+3,d.rep_col||'Arquitectes (COAIB)');
+  doc.setFont('Helvetica').setFontSize(7.5);txt(375,y,'Colegiado n.º');
+  doc.setFont('Helvetica-Oblique').setFontSize(7);txt(375,y+9,'Col·legiat núm.');
+  doc.setFont('Helvetica-Bold').setFontSize(8);txt(448,y+3,d.rep_numcol||'18773-9');
+  dotline(M+120,y+12,371);dotline(446,y+12,R);y+=22;
+
+  doc.setFont('Helvetica-Bold').setFontSize(9);txt(M,y,'CERTIFICA / CERTIFICA');y+=13;
+
+  doc.setFont('Helvetica').setFontSize(8);
+  txt(M,y,'1.°  Que de la inspección ocular realizada por mí a');
+  doc.setFont('Helvetica-Oblique').setFontSize(7.5);
+  txt(M,y+10,'1r   Que de la inspecció ocular realitzada per mi a');
+
+  const cx=335;doc.setLineWidth(0.5);
+  [[cx,y+1,ti==='Habitatge','VIVIENDA / HABITATGE',false],
+   [cx,y+14,ti==='Local','LOCAL / LOCAL',false],
+   [cx,y+27,tc==='Carència','CARENCIA / MANCANÇA',false],
+   [cx,y+40,ti==='Edifici residencial no habitatge','EDIFICIO RESIDENCIAL NO VIVIENDA',false],
+   [cx+8,y+49,false,'EDIFICI RESIDENCIAL NO HABITATGE',true]
+  ].forEach(([x,yy,chk,lbl,italic])=>{
+    if(!italic){doc.rect(x,yy,7,7).stroke();if(chk){doc.setFont('Helvetica-Bold').setFontSize(7);txt(x+1.2,yy+0.5,'X');}
+    doc.setFont('Helvetica').setFontSize(7.5);txt(x+11,yy+0.5,lbl);}
+    else{doc.setFont('Helvetica-BoldOblique').setFontSize(7);txt(x,yy,lbl);}
+  });y+=62;
+
+  doc.moveTo(M,y).lineTo(R,y).lineWidth(0.4).stroke();y+=8;
+  doc.setFont('Helvetica-Bold').setFontSize(8);txt(M,y,"SITUACIÓN DEL EDIFICIO / SITUACIÓ DE L'EDIFICI");y+=14;
+
+  [[`Municipio`,'Municipi',d.ed_mun||'','Localidad','Localitat',d.ed_loc||d.ed_mun||''],
+   ['Paraje o barrio','Indret o barri',dash(d.ed_barri),'Código catastral','Codi cadastral',d.ed_catastral||''],
+   ['Calle o plaza','Carrer o plaça',d.ed_carrer||'','Código postal','Codi postal',d.ed_cp||'']
+  ].forEach(([l1,li1,v1,l2,li2,v2])=>{
+    doc.setFont('Helvetica').setFontSize(7.5);txt(M,y,l1);
+    doc.setFont('Helvetica-Oblique').setFontSize(7);txt(M,y+9,li1);
+    doc.setFont('Helvetica-Bold').setFontSize(8);txt(M+58,y+3,v1);
+    doc.setFont('Helvetica').setFontSize(7.5);txt(320,y,l2);
+    doc.setFont('Helvetica-Oblique').setFontSize(7);txt(320,y+9,li2);
+    doc.setFont('Helvetica-Bold').setFontSize(8);txt(372,y+3,v2);
+    dotline(M+56,y+12,316);dotline(370,y+12,R);y+=22;
+  });
+
+  doc.moveTo(M,y).lineTo(R,y).lineWidth(0.4).stroke();y+=8;
+  doc.setFont('Helvetica-Bold').setFontSize(8);txt(M,y,"SITUACIÓN EN EL EDIFICIO / SITUACIÓ DINS L'EDIFICI");y+=14;
+  [['Bloque','Bloc',M,d.ed_bloc],['Escalera','Escala',168,d.ed_escala],
+   ['Piso','Pis',286,d.ed_pis],['Puerta','Porta',374,d.ed_porta]
+  ].forEach(([l1,l2,x,val])=>{
+    doc.setFont('Helvetica').setFontSize(7.5);txt(x,y,l1);
+    doc.setFont('Helvetica-Oblique').setFontSize(7);txt(x,y+9,l2);
+    doc.setFont('Helvetica-Bold').setFontSize(8);txt(x+l1.length*4.8+4,y+3,val||'');
+    dotline(x+l1.length*4.8+2,y+12,x+108);
+  });y+=22;
+
+  doc.setFont('Helvetica-Bold').setFontSize(8);txt(M,y,'DESTINO/USO');
+  doc.setFont('Helvetica').setFontSize(6.5);txt(M+65,y-1,'(1)');
+  doc.setFont('Helvetica-BoldOblique').setFontSize(7.5);txt(M,y+9,'DESTÍ/ÚS');
+  doc.setFont('Helvetica-Bold').setFontSize(8.5);txt(M+104,y+3,d.desti_us||'HABITATGE');
+  dotline(M+102,y+12,R);y+=22;
+
+  doc.setFont('Helvetica-Bold').setFontSize(7.5);txt(M,y,'CAPACIDAD MÁXIMA / NÚMERO DE PLAZAS');
+  doc.setFont('Helvetica').setFontSize(6);txt(M+198,y-1,'(2)');
+  doc.setFont('Helvetica-BoldOblique').setFontSize(7);txt(M,y+9,'CAPACITAT MÀXIMA / NÚMERO DE PLACES');
+  doc.setFont('Helvetica-Bold').setFontSize(11);txt(R-18,y+1,d.num_places||'');
+  dotline(M+196,y+12,R-20);y+=22;
+
+  const lOpts={width:W,lineBreak:true};
+  doc.setFont('Helvetica').setFontSize(7.5);
+  doc.text('Se deduce que reúne los requisitos exigidos para tener la habitabilidad objetiva que se detalla de acuerdo con la Orden o Decreto correspondiente y disposiciones concordantes.',M,y,lOpts);
+  y=doc.y+1;
+  doc.setFont('Helvetica-Oblique').setFontSize(7.5);
+  doc.text("Se'n dedueix que reuneix els requisits exigits per tenir l'habitabilitat objectiva que es detalla d'acord amb l'Ordre o Decret corresponent i disposicions concordants.",M,y,lOpts);
+  y=doc.y+5;
+  doc.setFont('Helvetica').setFontSize(7.5);
+  doc.text("2.° Que se trata de una vivienda, local o edificio residencial no-vivienda no incluído en el concepto de primera ocupación que define el art. 8, apartado a) del decreto 145/1997.",M,y,lOpts);
+  y=doc.y+1;
+  doc.setFont('Helvetica-Oblique').setFontSize(7.5);
+  doc.text("2n Que es tracta d'un habitatge, local o edifici residencial no-habitatge no inclòs en el concepte de primera ocupació que defineix l'art. 8, apartat a) del Decret 145/1997.",M,y,lOpts);
+  y=doc.y+5;
+  doc.setFont('Helvetica').setFontSize(7.5);
+  doc.text('Y para que conste a los efectos que correspondan, se firma este Certificado.',M,y,lOpts);y=doc.y;
+  doc.setFont('Helvetica-Oblique').setFontSize(7.5);
+  doc.text("I perquè consti als efectes que corresponguin, se signa aquest Certificat.",M,y,lOpts);y=doc.y+8;
+
+  doc.setFont('Helvetica').setFontSize(8);
+  txt(M,y,'el');doc.setFont('Helvetica-Bold');txt(M+14,y,dt.dia);
+  doc.setFont('Helvetica');txt(M+30,y,'de');doc.setFont('Helvetica-Bold');txt(M+42,y,dt.mes);
+  doc.setFont('Helvetica');txt(M+94,y,'de');doc.setFont('Helvetica-Bold');txt(M+106,y,dt.any);
+  dotline(M+12,y+9,M+28);dotline(M+40,y+9,M+92);dotline(M+104,y+9,M+135);
+  doc.setFont('Helvetica-Oblique').setFontSize(7);txt(M,y+10,'el');txt(M+14,y+10,'d');txt(M+42,y+10,'de');
+  y+=24;
+
+  doc.setFont('Helvetica').setFontSize(6.5);
+  doc.text("(1) En el caso de locales, se detallará el uso específico / En el cas de locals, cal detallar l'ús específic.",M,y,lOpts);y=doc.y;
+  doc.text('(2) El número de plazas se determinará en base a la regulación específica contenida en el Decreto 145/1997.',M,y,lOpts);y=doc.y;
+  doc.setFont('Helvetica-Oblique').setFontSize(6.5);
+  doc.text('El número de places es determinará en base a la regulació específica continguda en el Decret 145/1997.',M,y,lOpts);y=doc.y+6;
+
+  const peuY=Math.max(y,718);
+  doc.setLineWidth(0.5).rect(M,peuY,195,52).stroke();
+  doc.setFont('Helvetica').setFontSize(7.5);txt(M+4,peuY+8,'Sello del Colegio o la Administración');
+  doc.setFont('Helvetica-Oblique');txt(M+4,peuY+19,"Segell del Col·legi o l'Administració");
+  doc.setFont('Helvetica-Bold').setFontSize(8);txt(390,peuY+8,'El Técnico');
+  doc.setFont('Helvetica-BoldOblique').setFontSize(8);txt(390,peuY+19,'El Tècnic');
+  doc.setFont('Helvetica').setFontSize(6.5);txt(M,830,'Mod. C. H./07/98');
+  doc.setFont('Helvetica-Bold').setFontSize(7);txt(355,822,'Ejemplar para la Administración.');
+  doc.setFont('Helvetica-BoldOblique').setFontSize(7);txt(355,830,"Exemplar per l'Administració.");
+
+  return doc;
+}
+
+function genFotosPDF() {
+  const photos = photoDataURLs.filter(Boolean);
+  if (!photos.length) return null;
+  const d = collectData();
+  const dt = fmtDate(d.rep_data);
+  const doc = new jsPDF({ unit:'mm', format:'a4' });
+  const M=40, R=555;
+  function txt(x,y,t){doc.text(t,x,y,{lineBreak:false});}
+  function dotline(x1,y,x2){doc.moveTo(x1,y).lineTo(x2,y).lineWidth(0.3).dash(1,{space:2}).stroke().undash();}
+
+  function addSituacio(doc, y0) {
+    let y=y0;
+    doc.setFont('Helvetica-Bold').setFontSize(8);txt(M,y,'SITUACIÓ:');y+=12;
+    [[`Municipi`,d.ed_mun||'','Localitat',d.ed_loc||d.ed_mun||''],
+     ['Indret o barri',dash(d.ed_barri),'Codi cadastral',d.ed_catastral||''],
+     ['Carrer o Plaça',d.ed_carrer||'','Codi Postal',d.ed_cp||'']
+    ].forEach(([l1,v1,l2,v2])=>{
+      doc.setFont('Helvetica').setFontSize(7.5);txt(M,y,l1);
+      doc.setFont('Helvetica-Bold');txt(M+l1.length*4.2+6,y,v1);
+      doc.setFont('Helvetica');txt(360,y,l2);
+      doc.setFont('Helvetica-Bold');txt(360+l2.length*4.2+6,y,v2);
+      dotline(M,y+9,355);dotline(360,y+9,R);y+=16;
+    });
+    doc.setFont('Helvetica').setFontSize(7.5);
+    ['Bloc','Escala','Pis','Porta'].forEach((l,i)=>{
+      const x=[M,155,270,375][i];const val=[d.ed_bloc,d.ed_escala,d.ed_pis,d.ed_porta][i];
+      txt(x,y,l);doc.setFont('Helvetica-Bold');txt(x+l.length*4.8+4,y,dash(val));doc.setFont('Helvetica');
+      dotline(x+l.length*4.8+2,y+9,x+108);
+    });y+=18;
+    doc.setFont('Helvetica').setFontSize(8);
+    txt(200,y,`el   ${dt.dia}   de/d'`);txt(278,y,dt.mes);txt(355,y,`de   ${dt.any}`);
+    dotline(275,y+9,350);y+=14;
+    doc.setFont('Helvetica').setFontSize(7.5);txt(350,y,'El Tècnic');
+    return y+22;
+  }
+
+  photos.forEach((dataURL,idx)=>{
+    if(idx>0) doc.addPage();
+    doc.setFont('Helvetica-Bold').setFontSize(18);
+    txt(M,30,"FOTOGRAFIA DE LA FAÇANA DE L'EDIFICI");
+    const yAfter=addSituacio(doc,58);
+    const imgH=760-yAfter;
+    try{doc.addImage(dataURL,getImgFmt(dataURL),M,yAfter,515,imgH,'','FAST');}catch(e){}
+    const yFoot=768;
+    doc.setFont('Helvetica').setFontSize(8);
+    txt(200,yFoot,`el   ${dt.dia}   de/d'`);txt(278,yFoot,dt.mes);txt(355,yFoot,`de   ${dt.any}`);
+    dotline(275,yFoot+9,350);
+    doc.setFont('Helvetica').setFontSize(7.5);txt(350,yFoot+14,'El Tècnic');
+  });
+  return doc;
+}
+
+function genPlanolPDF() {
+  if(!planolDataURL) return null;
+  const d=collectData();const dt=fmtDate(d.rep_data);
+  const doc=new jsPDF({unit:'mm',format:'a4'});
+  const M=40;
+  function txt(x,y,t){doc.text(t,x,y,{lineBreak:false});}
+  function dotline(x1,y,x2){doc.moveTo(x1,y).lineTo(x2,y).lineWidth(0.3).dash(1,{space:2}).stroke().undash();}
+
+  doc.setFont('Helvetica-Bold').setFontSize(18);
+  txt(M,30,"PLÀNOL DE SITUACIÓ DE L'EDIFICI");
+  let y=58;
+  doc.setFont('Helvetica-Bold').setFontSize(8);txt(M,y,'SITUACIÓ:');y+=12;
+  [[`Municipi`,d.ed_mun||'','Localitat',d.ed_loc||d.ed_mun||''],
+   ['Indret o barri',dash(d.ed_barri),'Codi cadastral',d.ed_catastral||''],
+   ['Carrer o Plaça',d.ed_carrer||'','Codi Postal',d.ed_cp||'']
+  ].forEach(([l1,v1,l2,v2])=>{
+    doc.setFont('Helvetica').setFontSize(7.5);txt(M,y,l1);
+    doc.setFont('Helvetica-Bold');txt(M+l1.length*4.2+6,y,v1);
+    doc.setFont('Helvetica');txt(360,y,l2);
+    doc.setFont('Helvetica-Bold');txt(360+l2.length*4.2+6,y,v2);
+    dotline(M,y+9,355);dotline(360,y+9,555);y+=16;
+  });
+  doc.setFont('Helvetica').setFontSize(7.5);
+  ['Bloc','Escala','Pis','Porta'].forEach((l,i)=>{
+    const x=[M,155,270,375][i];const val=[d.ed_bloc,d.ed_escala,d.ed_pis,d.ed_porta][i];
+    txt(x,y,l);doc.setFont('Helvetica-Bold');txt(x+l.length*4.8+4,y,dash(val));doc.setFont('Helvetica');
+    dotline(x+l.length*4.8+2,y+9,x+108);
+  });y+=18;
+  doc.setFont('Helvetica').setFontSize(8);
+  txt(200,y,`el   ${dt.dia}   de/d'`);txt(278,y,dt.mes);txt(355,y,`de   ${dt.any}`);
+  dotline(275,y+9,350);y+=16;
+  doc.setFont('Helvetica').setFontSize(7.5);txt(350,y,'El Tècnic');y+=20;
+  const imgH=760-y;
+  try{doc.addImage(planolDataURL,getImgFmt(planolDataURL),M,y,515,imgH,'','FAST');}catch(e){}
+  const yFoot=768;
+  doc.setFont('Helvetica').setFontSize(8);
+  txt(200,yFoot,`el   ${dt.dia}   de/d'`);txt(278,yFoot,dt.mes);txt(355,yFoot,`de   ${dt.any}`);
+  dotline(275,yFoot+9,350);
+  doc.setFont('Helvetica').setFontSize(7.5);txt(350,yFoot+14,'El Tècnic');
+  return doc;
+}
+
+function savePDF(doc, filename) {
+  if (!doc) return false;
+  doc.save(filename);
+  return true;
+}
+
+async function genCert() {
+  buildPreview();
+  const nom = (v('sol_nom')||'expedient').replace(/\s+/g,'_').substring(0,20);
+  savePDF(genCertPDF(), `Certificat_Habitabilitat_${nom}.pdf`);
+  showToast('✓ PDF Certificat generat', 'success');
+}
+
+async function genFotos() {
+  const doc = genFotosPDF();
+  if (!doc) { showToast('⚠ Afegeix almenys una fotografia', 'error'); return; }
+  const nom = (v('sol_nom')||'expedient').replace(/\s+/g,'_').substring(0,20);
+  savePDF(doc, `Fotografies_Fachada_${nom}.pdf`);
+  showToast('✓ PDF Fotografies generat', 'success');
+}
+
+async function genPlanol() {
+  const doc = genPlanolPDF();
+  if (!doc) { showToast('⚠ Afegeix el plànol de situació', 'error'); return; }
+  const nom = (v('sol_nom')||'expedient').replace(/\s+/g,'_').substring(0,20);
+  savePDF(doc, `Planol_Situacio_${nom}.pdf`);
+  showToast('✓ PDF Plànol generat', 'success');
+}
+
+async function genAll() {
+  buildPreview();
+  const nom = (v('sol_nom')||'expedient').replace(/\s+/g,'_').substring(0,20);
+  showToast('Generant PDFs...');
+  await new Promise(r => setTimeout(r,100));
+  savePDF(genCertPDF(), `Certificat_Habitabilitat_${nom}.pdf`);
+  await new Promise(r => setTimeout(r,400));
+  const fd = genFotosPDF();
+  if (fd) savePDF(fd, `Fotografies_Fachada_${nom}.pdf`);
+  await new Promise(r => setTimeout(r,400));
+  const pd = genPlanolPDF();
+  if (pd) savePDF(pd, `Planol_Situacio_${nom}.pdf`);
+  showToast('✓ PDFs generats correctament', 'success');
+}
+
+// ═══════════════════════
+//  BIBLIOTECA
+// ═══════════════════════
+const LIB_KEY = 'rvhabit_mobile_lib';
+
+// ─── Biblioteca en memòria (carregada de Synology) ───
+let _synologyLib = null; // biblioteca completa carregada
+
+function getLib() {
+  // Prioritat: biblioteca de Synology > localStorage
+  if (_synologyLib) return _synologyLib;
+  try { return JSON.parse(localStorage.getItem(LIB_KEY)||'[]'); } catch(e){return[];}
+}
+function setLib(lib) {
+  _synologyLib = lib;
+  try { localStorage.setItem(LIB_KEY, JSON.stringify(lib)); } catch(e) {}
+}
+
+// ─── CARREGAR DE SYNOLOGY ───
+function carregarDeSynology(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const payload = JSON.parse(e.target.result);
+      if (!payload.expedients) { showToast('⚠ Fitxer no vàlid', 'error'); return; }
+      _synologyLib = payload.expedients;
+      try { localStorage.setItem(LIB_KEY, JSON.stringify(_synologyLib)); } catch(ex) {}
+      setSyncStatus('ok', `✅ Carregat: ${_synologyLib.length} expedients de "${file.name}"`);
+      document.getElementById('btn-desar-synology').style.display = 'block';
+      renderLib();
+      showToast(`✓ ${_synologyLib.length} expedients carregats`, 'success');
+    } catch(err) { showToast('⚠ Error llegint el fitxer: ' + err.message, 'error'); }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+// ─── DESAR A SYNOLOGY ───
+async function desarASynology() {
+  const lib = getLib();
+  if (!lib.length) { showToast('⚠ No hi ha expedients per desar', 'error'); return; }
+  showToast('Preparant fitxer...', '');
+  await new Promise(r => setTimeout(r, 100));
+
+  const payload = JSON.stringify({
+    app: 'RVHabit',
+    version: '1.0',
+    exportedAt: new Date().toISOString(),
+    count: lib.length,
+    expedients: lib  // inclou photos, planol i docs
+  });
+
+  const blob = new Blob([payload], {type: 'application/octet-stream'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'RVHabit_Biblioteca.rvhabit';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+
+  setSyncStatus('ok', `✅ Fitxer generat — desa'l sobre l'original a la Synology`);
+  showToast('✓ Fitxer generat — sobreescriu el de la Synology', 'success');
+}
+
+function setSyncStatus(type, text) {
+  const box = document.getElementById('sync-status-box');
+  if (!box) return;
+  box.style.display = 'block';
+  const colors = { ok:'#f0faf5', warn:'#fff8e1', err:'#fff0f0' };
+  box.style.background = colors[type] || colors.warn;
+  box.style.color = type==='ok' ? 'var(--success)' : type==='err' ? 'var(--danger)' : '#8a6000';
+  box.textContent = text;
+}
+
+// ─── DESAR EXPEDIENT ───
+async function saveExp() {
+  const data = collectData();
+  if (!data.sol_nom) { showToast('⚠ Introdueix el nom del sol·licitant', 'error'); return; }
+  const lib = getLib();
+  const id = _expId || Date.now();
+  _expId = id;
+  const idx = lib.findIndex(e => e.id === id);
+
+  // Preparar docs amb base64
+  const docsForExport = {};
+  for (const [key, doc] of Object.entries(docAttachments)) {
+    if (doc && doc.base64) {
+      docsForExport[key] = { name: doc.name, size: doc.size, base64: doc.base64, onDisk: false };
+    }
+  }
+
+  const entry = {
+    id, data,
+    photos: photoDataURLs.some(Boolean) ? photoDataURLs : undefined,
+    planol: planolDataURL || undefined,
+    docs: Object.keys(docsForExport).length ? docsForExport : undefined,
+    savedAt: new Date().toLocaleDateString('ca-ES'),
+    updatedAt: new Date().toISOString()
+  };
+
+  if (idx >= 0) { lib[idx] = entry; } else { lib.unshift(entry); }
+  setLib(lib.slice(0, 100));
+  savePhotosToStorage();
+  autoSave();
+  document.getElementById('btn-desar-synology').style.display = 'block';
+  setSyncStatus('warn', '⚠ Expedient desat localment — recorda desar a Synology');
+  showToast('✓ Expedient desat — ara desa a Synology', 'success');
+  renderLib();
+}
+
+function renderLib() {
+  const lib = getLib();
+  const container = document.getElementById('lib-list');
+  if (!lib.length) {
+    container.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:8px 0;">Cap expedient. Carrega la biblioteca de la Synology.</div>';
+    return;
+  }
+  container.innerHTML = `
+    <div style="font-size:11px;color:var(--muted);margin-bottom:10px;font-weight:600;">${lib.length} EXPEDIENT${lib.length!==1?'S':''}</div>
+    ${lib.map(e => `
+    <div class="exp-card">
+      <div class="exp-card-info">
+        <div class="exp-card-num">${e.data.num_expedient||'—'}</div>
+        <div class="exp-card-nom">${e.data.sol_nom||'—'}</div>
+        <div class="exp-card-adr">${e.data.ed_carrer||'—'}, ${e.data.ed_mun||''}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0;">
+        <div class="exp-card-date">${e.savedAt}</div>
+        <button class="btn-load-exp" onclick="loadExp(${e.id})">Carregar</button>
+      </div>
+    </div>`).join('')}`;
+}
+
+function loadExp(id) {
+  const entry = getLib().find(e => e.id === id);
+  if (!entry) return;
+  _expId = id;
+  fillData(entry.data);
+
+  // Netejar UI fotos
+  photoDataURLs = [null,null,null,null];
+  planolDataURL = null;
+  [0,1,2,3].forEach(i => {
+    const slot = document.getElementById(`ps-${i}`);
+    const labels=['Principal','Foto 2','Foto 3','Foto 4'];
+    if(slot){slot.classList.remove('has-photo');slot.innerHTML=`<span class="slot-icon">📷</span><span class="slot-label">${labels[i]}</span><input type="file" accept="image/*" capture="environment" onchange="loadPhoto(event,${i})"><button class="btn-del-photo" onclick="removePhoto(event,${i})">✕</button>`;}
+  });
+  const pa = document.getElementById('planol-upload');
+  if(pa){pa.classList.remove('has-image');pa.innerHTML='<span style="font-size:32px;opacity:0.3;">🗺️</span><div style="font-size:13px;color:var(--muted);font-weight:600;">Toca per afegir el plànol</div><input type="file" accept="image/*" onchange="loadPlanol(event)" style="position:absolute;inset:0;opacity:0;width:100%;height:100%;z-index:2;">';}
+
+  // Restaurar fotos
+  if (entry.photos) {
+    photoDataURLs = entry.photos;
+    entry.photos.forEach((p, i) => { if (p) renderPhotoSlot(i, p); });
+  } else {
+    loadPhotosFromStorage(id);
+  }
+  // Restaurar plànol
+  if (entry.planol) {
+    planolDataURL = entry.planol;
+    const area = document.getElementById('planol-upload');
+    if(area){
+      area.classList.add('has-image');
+      area.innerHTML = `<img src="${entry.planol}"><div style="font-size:11px;color:var(--success);margin-top:8px;font-weight:600;">✓ Plànol carregat</div><input type="file" accept="image/*" onchange="loadPlanol(event)" style="position:absolute;inset:0;opacity:0;width:100%;height:100%;z-index:2;">`;
+    }
+  }
+  // Restaurar documents adjunts
+  if (entry.docs) {
+    for (const [key, doc] of Object.entries(entry.docs)) {
+      if (doc) docAttachments[key] = doc;
+    }
+    renderDocSlots();
+  }
+
+  savePhotosToStorage();
+  autoSave();
+  showToast('✓ Expedient carregat', 'success');
+  showPanel('sol');
+}
+
+function newExp() {
+  _expId = null;
+  photoDataURLs = [null,null,null,null];
+  planolDataURL = null;
+  docAttachments = { certificat:null,fotografies:null,planol:null,escriptura:null,factura:null,cedula:null };
+  ['sol_nom','sol_dni','sol_tel','sol_dom','sol_mun','sol_email','ed_mun','ed_carrer','ed_cp',
+   'ed_catastral','ed_bloc','ed_escala','ed_pis','ed_porta','num_places','num_expedient'
+  ].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+  document.getElementById('desti_us').value = 'HABITATGE';
+  document.getElementById('rep_data').value = new Date().toISOString().split('T')[0];
+  document.getElementById('headerExp').textContent = 'Nou expedient';
+  [0,1,2,3].forEach(i => {
+    const slot=document.getElementById(`ps-${i}`);
+    const labels=['Principal','Foto 2','Foto 3','Foto 4'];
+    if(slot){slot.classList.remove('has-photo');slot.innerHTML=`<span class="slot-icon">📷</span><span class="slot-label">${labels[i]}</span><input type="file" accept="image/*" capture="environment" onchange="loadPhoto(event,${i})"><button class="btn-del-photo" onclick="removePhoto(event,${i})">✕</button>`;}
+  });
+  renderDocSlots();
+  localStorage.removeItem('rvhabit_mobile_draft');
+  document.getElementById('btn-desar-synology').style.display = 'block';
+  setSyncStatus('warn', '⚠ Nou expedient — recorda desar a Synology quan acabis');
+  showToast('Nou expedient creat');
+  showPanel('sol');
+}
+
+function initSync() {
+  // Carregar biblioteca local si existeix
+  const localLib = (() => { try { return JSON.parse(localStorage.getItem(LIB_KEY)||'[]'); } catch(e){return[];} })();
+  if (localLib.length) {
+    _synologyLib = localLib;
+    setSyncStatus('warn', `⚠ ${localLib.length} expedients en memòria local — carrega de Synology per actualitzar`);
+    document.getElementById('btn-desar-synology').style.display = 'block';
+    renderLib();
+  }
+}
+</script>
+</body>
+</html>
