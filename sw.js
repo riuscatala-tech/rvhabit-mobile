@@ -1,4 +1,4 @@
-const CACHE = 'rvhabit-mobile-v1';
+const CACHE = 'rvhabit-mobile-v5';
 const ASSETS = ['./index.html', './manifest.json'];
 
 self.addEventListener('install', e => {
@@ -14,7 +14,12 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
+  // Network first — sempre intenta la xarxa, caché com a fallback
   e.respondWith(
-    caches.match(e.request).then(cached => cached || fetch(e.request).catch(() => cached))
+    fetch(e.request).then(response => {
+      const clone = response.clone();
+      caches.open(CACHE).then(c => c.put(e.request, clone));
+      return response;
+    }).catch(() => caches.match(e.request))
   );
 });
