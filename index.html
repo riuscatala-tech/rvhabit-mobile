@@ -896,10 +896,25 @@ function renderDocSlots() {
         <div class="doc-name">${label}</div>
         <div class="doc-status" id="docstatus-${key}">${docAttachments[key] ? '✓ ' + docAttachments[key].name : 'Pendent'}</div>
       </div>
+      ${docAttachments[key] ? `<button class="btn-doc-attach" style="background:var(--success);margin-right:4px;" onclick="obrirDoc('${key}')">👁</button>` : ''}
       <label class="btn-doc-attach">PDF
         <input type="file" accept=".pdf" onchange="attachDoc(event,'${key}')">
       </label>
     </div>`).join('');
+}
+
+function obrirDoc(key) {
+  const doc = docAttachments[key];
+  if (!doc || !doc.base64) { showToast('⚠ Document no disponible', 'error'); return; }
+  try {
+    const b64 = doc.base64.includes(',') ? doc.base64.split(',')[1] : doc.base64;
+    const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+    const blob = new Blob([bytes], {type:'application/pdf'});
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
+  } catch(e) {
+    showToast('⚠ No es pot obrir: ' + e.message, 'error');
+  }
 }
 
 function attachDoc(event, key) {
