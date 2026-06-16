@@ -171,15 +171,17 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
 
 .radio-group { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
 .radio-item {
-  display: flex; align-items: center; gap: 6px;
+  display: flex; align-items: center; gap: 5px;
   background: var(--input-bg);
   border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 8px 12px;
+  padding: 8px 6px;
   cursor: pointer;
-  font-size: 14px;
-  flex: 1; min-width: 100px;
+  font-size: 11px;
+  flex: 1; min-width: 0;
   transition: all 0.15s;
+  word-break: break-word;
+  line-height: 1.2;
 }
 .radio-item input { accent-color: var(--accent); width: 16px; height: 16px; }
 .radio-item:has(input:checked) { background: #e8f0f8; border-color: var(--accent); color: var(--accent); font-weight: 600; }
