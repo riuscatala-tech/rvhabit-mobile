@@ -850,10 +850,16 @@ function lockApp() {
 // contrasenya recordada). No toca res de la Synology ni del Mac. Útil quan
 // el mòbil mostra expedients que ja s'han esborrat a l'altra banda.
 function esborrarDadesLocals() {
-  if (!confirm('Això esborrarà la còpia local d\'aquest mòbil (expedients, fotos i la contrasenya recordada). No es pot desfer. Continuar?')) return;
-  const keys = Object.keys(localStorage).filter(k => k.startsWith('rvhabit_mobile_'));
+  if (!confirm('Això esborrarà la còpia local d\'aquest mòbil (expedients i fotos). La contrasenya recordada NO s\'esborra, perquè és la mateixa que xifra el fitxer de la Synology. Continuar?')) return;
+  // IMPORTANT: mai esborrar 'rvhabit_mobile_remembered_pp' aquí. Si s'esborra,
+  // en recarregar l'app no troba cap contrasenya i en demana crear una de NOVA,
+  // que no coincideix amb la que xifra el fitxer real de la Synology — l'usuari
+  // quedaria amb una contrasenya "òrfena" incompatible amb tot el que ja existeix.
+  const keys = Object.keys(localStorage).filter(k =>
+    k.startsWith('rvhabit_mobile_') && k !== 'rvhabit_mobile_remembered_pp'
+  );
   keys.forEach(k => localStorage.removeItem(k));
-  alert('Dades locals esborrades. Torna a carregar el fitxer de la Synology.');
+  alert('Dades locals esborrades. Torna a carregar el fitxer de la Synology — no et tornarà a demanar la contrasenya.');
   location.reload();
 }
 
