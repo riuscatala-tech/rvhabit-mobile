@@ -8,6 +8,9 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="RVHabit">
 <meta name="theme-color" content="#1a3a5c">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>RVHabit Mobile</title>
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -605,6 +608,17 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
 
     <div style="height:16px;"></div>
     <div id="lib-list"><div style="color:var(--muted);font-size:13px;padding:8px 0;">Cap expedient. Carrega de Synology.</div></div>
+
+    <div style="height:24px;"></div>
+    <div class="tip" style="background:#fff0f0; color:var(--danger);">
+      ⚠️ Aquest mòbil guarda una còpia pròpia. Si esborres expedients al Mac/Synology
+      i aquí no desapareixen, és perquè encara són en aquesta còpia local. Esborra-la
+      i torna a carregar el fitxer bo de la Synology.
+    </div>
+    <button class="btn-primary" style="background:#fff; color:var(--danger); border:1px solid var(--danger); font-size:14px;" onclick="esborrarDadesLocals()">
+      🗑️ Esborrar dades d'aquest dispositiu
+    </button>
+    <div style="text-align:center; color:var(--muted); font-size:11px; margin-top:14px;">RVHabit Mobile · v2026-06-21.1</div>
   </div>
 </div><!-- /page-content -->
 </div><!-- /main -->
@@ -829,6 +843,17 @@ async function ensurePassphrase() {
 function lockApp() {
   _passphrase = null;
   localStorage.removeItem('rvhabit_mobile_remembered_pp'); // "Bloquejar" ha de bloquejar de veritat
+  location.reload();
+}
+
+// Esborra TOTA la còpia local d'aquest mòbil (biblioteca, esborrany, fotos i
+// contrasenya recordada). No toca res de la Synology ni del Mac. Útil quan
+// el mòbil mostra expedients que ja s'han esborrat a l'altra banda.
+function esborrarDadesLocals() {
+  if (!confirm('Això esborrarà la còpia local d\'aquest mòbil (expedients, fotos i la contrasenya recordada). No es pot desfer. Continuar?')) return;
+  const keys = Object.keys(localStorage).filter(k => k.startsWith('rvhabit_mobile_'));
+  keys.forEach(k => localStorage.removeItem(k));
+  alert('Dades locals esborrades. Torna a carregar el fitxer de la Synology.');
   location.reload();
 }
 
