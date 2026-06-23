@@ -8,9 +8,6 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="RVHabit">
 <meta name="theme-color" content="#1a3a5c">
-<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-<meta http-equiv="Pragma" content="no-cache">
-<meta http-equiv="Expires" content="0">
 <title>RVHabit Mobile</title>
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -608,17 +605,6 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
 
     <div style="height:16px;"></div>
     <div id="lib-list"><div style="color:var(--muted);font-size:13px;padding:8px 0;">Cap expedient. Carrega de Synology.</div></div>
-
-    <div style="height:24px;"></div>
-    <div class="tip" style="background:#fff0f0; color:var(--danger);">
-      ⚠️ Aquest mòbil guarda una còpia pròpia. Si esborres expedients al Mac/Synology
-      i aquí no desapareixen, és perquè encara són en aquesta còpia local. Esborra-la
-      i torna a carregar el fitxer bo de la Synology.
-    </div>
-    <button class="btn-primary" style="background:#fff; color:var(--danger); border:1px solid var(--danger); font-size:14px;" onclick="esborrarDadesLocals()">
-      🗑️ Esborrar dades d'aquest dispositiu
-    </button>
-    <div style="text-align:center; color:var(--muted); font-size:11px; margin-top:14px;">RVHabit Mobile · v2026-06-21.2</div>
   </div>
 </div><!-- /page-content -->
 </div><!-- /main -->
@@ -654,23 +640,29 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
 
 <div class="toast" id="toast"></div>
 
+<!-- MODAL: VISOR PDF -->
+<div id="pdf-viewer-overlay" style="display:none; position:fixed; inset:0; background:#000; z-index:2100; flex-direction:column;">
+  <div style="display:flex; align-items:center; justify-content:space-between; padding:10px 14px; background:var(--accent,#1a3a5c);">
+    <span id="pdf-viewer-title" style="color:#fff; font-size:14px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></span>
+    <div style="display:flex; gap:10px; flex-shrink:0;">
+      <a id="pdf-viewer-download" download style="color:#fff; text-decoration:none; font-size:13px; border:1px solid rgba(255,255,255,0.5); border-radius:6px; padding:4px 10px;">Desa</a>
+      <button onclick="tancarPdfViewer()" style="background:none; border:none; color:#fff; font-size:20px; line-height:1; padding:0 4px;">✕</button>
+    </div>
+  </div>
+  <iframe id="pdf-viewer-frame" style="flex:1; border:none; background:#fff;"></iframe>
+</div>
+
 <!-- MODAL: CONTRASENYA (xifratge de les dades) -->
 <div id="passphrase-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:2000; align-items:center; justify-content:center; padding:20px;">
   <div style="background:white; border-radius:14px; padding:24px; width:100%; max-width:340px; box-shadow:0 8px 30px rgba(0,0,0,0.3);">
     <div id="pp-title" style="font-size:18px; font-weight:700; color:var(--accent); margin-bottom:10px;">Contrasenya</div>
     <div id="pp-sub" style="font-size:12px; color:var(--muted); margin-bottom:14px; line-height:1.5;">Introdueix la contrasenya per desxifrar les dades.</div>
-    <form id="pp-form" autocomplete="on">
-    <input type="text" name="username" value="RVHabit" autocomplete="username" style="position:absolute; width:1px; height:1px; opacity:0; pointer-events:none;" tabindex="-1" aria-hidden="true">
-    <input type="password" id="pp-input" name="password" placeholder="Contrasenya" autocomplete="current-password"
+    <input type="password" id="pp-input" placeholder="Contrasenya" autocomplete="off"
       style="width:100%; padding:11px 12px; border:1px solid var(--border); border-radius:8px; margin-bottom:10px; font-size:15px;">
-    <input type="password" id="pp-input2" name="password2" placeholder="Repeteix la contrasenya" autocomplete="new-password"
+    <input type="password" id="pp-input2" placeholder="Repeteix la contrasenya" autocomplete="off"
       style="display:none; width:100%; padding:11px 12px; border:1px solid var(--border); border-radius:8px; margin-bottom:10px; font-size:15px;">
     <div id="pp-error" style="color:var(--danger); font-size:12px; margin-bottom:10px; display:none;"></div>
-    <label style="display:flex; align-items:center; gap:7px; font-size:13px; color:var(--muted); margin-bottom:14px;">
-      <input type="checkbox" id="pp-remember" checked style="width:16px; height:16px;"> Recorda-la en aquest dispositiu (no tornar a demanar)
-    </label>
-    <button type="submit" class="btn-primary" id="pp-submit" style="margin-bottom:0;">Desbloquejar</button>
-    </form>
+    <button class="btn-primary" id="pp-submit" style="margin-bottom:0;">Desbloquejar</button>
   </div>
 </div>
 
@@ -758,17 +750,14 @@ function askPassphrase({ mode }) {
       title.textContent = 'Crea la contrasenya';
       sub.textContent = 'Protegirà les dades dels clients en aquest mòbil. Guarda-la en un lloc segur: si la perds, no es podran recuperar les dades.';
       input2.style.display = 'block';
-      input1.autocomplete = 'new-password';
     } else if (mode === 'wrong') {
       title.textContent = 'Contrasenya incorrecta';
       sub.textContent = 'Torna-ho a provar.';
       input2.style.display = 'none';
-      input1.autocomplete = 'current-password';
     } else {
       title.textContent = 'Contrasenya';
       sub.textContent = 'Introdueix la contrasenya per desxifrar les dades.';
       input2.style.display = 'none';
-      input1.autocomplete = 'current-password';
     }
     overlay.style.display = 'flex';
     setTimeout(() => input1.focus(), 50);
@@ -781,22 +770,10 @@ function submitPassphrase() {
   const err = document.getElementById('pp-error');
   if (!p1 || p1.length < 4) { err.textContent = 'Mínim 4 caràcters.'; err.style.display = 'block'; return; }
   if (isCreate && p1 !== p2) { err.textContent = 'Les contrasenyes no coincideixen.'; err.style.display = 'block'; return; }
-  // "Recorda-la" guarda la contrasenya en aquest mòbil perquè no calgui
-  // tornar-la a escriure — no depèn de si Safari/iOS decideix oferir-la o no.
-  if (document.getElementById('pp-remember').checked) {
-    localStorage.setItem('rvhabit_mobile_remembered_pp', p1);
-  } else {
-    localStorage.removeItem('rvhabit_mobile_remembered_pp');
-  }
   document.getElementById('passphrase-overlay').style.display = 'none';
   if (_ppResolve) { const r = _ppResolve; _ppResolve = null; r(p1); }
 }
-// Cal un <form> real amb submit (no un simple click) perquè Safari/iOS
-// ofereixi guardar o actualitzar la contrasenya al Clauer amb Face ID.
-document.getElementById('pp-form').addEventListener('submit', (e) => {
-  e.preventDefault();
-  submitPassphrase();
-});
+document.getElementById('pp-submit').addEventListener('click', submitPassphrase);
 
 // Assegura que tenim una contrasenya abans de llegir/escriure dades sensibles.
 // Si ja hi ha dades xifrades desades (LIB_KEY o el draft), demana desbloquejar;
@@ -810,23 +787,6 @@ async function ensurePassphrase() {
   const hasEncrypted = isEncryptedEnvelopeWeb(libParsed) || isEncryptedEnvelopeWeb(draftParsed);
   const hasLegacyPlain = (rawLib && !hasEncrypted) || (rawDraft && !hasEncrypted);
   let mode = hasEncrypted ? 'unlock' : 'create';
-
-  // Si l'usuari va triar "Recorda-la", la provem primer sense mostrar res.
-  // Així no depenem de si Safari/iOS ofereix o no l'ompliment amb Face ID.
-  const remembered = localStorage.getItem('rvhabit_mobile_remembered_pp');
-  if (remembered) {
-    if (mode !== 'unlock') {
-      _passphrase = remembered;
-      return _passphrase;
-    }
-    try {
-      if (isEncryptedEnvelopeWeb(libParsed)) await decryptStringWeb(rawLib, remembered);
-      else if (isEncryptedEnvelopeWeb(draftParsed)) await decryptStringWeb(rawDraft, remembered);
-      _passphrase = remembered;
-      return _passphrase;
-    } catch (e) { /* contrasenya recordada ja no és vàlida — demanem-la de nou */ }
-  }
-
   for (let attempts = 0; attempts < 6; attempts++) {
     const pass = await askPassphrase({ mode });
     if (mode !== 'unlock') { _passphrase = pass; return _passphrase; }
@@ -840,28 +800,7 @@ async function ensurePassphrase() {
   }
   return null;
 }
-function lockApp() {
-  _passphrase = null;
-  localStorage.removeItem('rvhabit_mobile_remembered_pp'); // "Bloquejar" ha de bloquejar de veritat
-  location.reload();
-}
-
-// Esborra TOTA la còpia local d'aquest mòbil (biblioteca, esborrany, fotos i
-// contrasenya recordada). No toca res de la Synology ni del Mac. Útil quan
-// el mòbil mostra expedients que ja s'han esborrat a l'altra banda.
-function esborrarDadesLocals() {
-  if (!confirm('Això esborrarà la còpia local d\'aquest mòbil (expedients i fotos). La contrasenya recordada NO s\'esborra, perquè és la mateixa que xifra el fitxer de la Synology. Continuar?')) return;
-  // IMPORTANT: mai esborrar 'rvhabit_mobile_remembered_pp' aquí. Si s'esborra,
-  // en recarregar l'app no troba cap contrasenya i en demana crear una de NOVA,
-  // que no coincideix amb la que xifra el fitxer real de la Synology — l'usuari
-  // quedaria amb una contrasenya "òrfena" incompatible amb tot el que ja existeix.
-  const keys = Object.keys(localStorage).filter(k =>
-    k.startsWith('rvhabit_mobile_') && k !== 'rvhabit_mobile_remembered_pp'
-  );
-  keys.forEach(k => localStorage.removeItem(k));
-  alert('Dades locals esborrades. Torna a carregar el fitxer de la Synology — no et tornarà a demanar la contrasenya.');
-  location.reload();
-}
+function lockApp() { _passphrase = null; location.reload(); }
 
 // ═══════════════════════
 //  STATE
@@ -1140,10 +1079,23 @@ function obrirDoc(key) {
     const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
     const blob = new Blob([bytes], {type:'application/pdf'});
     const url = URL.createObjectURL(blob);
-    window.open(url, '_blank');
+    document.getElementById('pdf-viewer-title').textContent = doc.name || 'Document';
+    const dlBtn = document.getElementById('pdf-viewer-download');
+    dlBtn.href = url;
+    dlBtn.setAttribute('download', doc.name || 'document.pdf');
+    document.getElementById('pdf-viewer-frame').src = url;
+    document.getElementById('pdf-viewer-overlay').style.display = 'flex';
   } catch(e) {
     showToast('⚠ No es pot obrir: ' + e.message, 'error');
   }
+}
+
+function tancarPdfViewer() {
+  const frame = document.getElementById('pdf-viewer-frame');
+  const src = frame.src;
+  frame.src = '';
+  if (src) URL.revokeObjectURL(src);
+  document.getElementById('pdf-viewer-overlay').style.display = 'none';
 }
 
 function attachDoc(event, key) {
@@ -1553,31 +1505,7 @@ async function desarASynology() {
   });
   const payload = await encryptStringWeb(plain, _passphrase);
 
-  const blob = new Blob([payload], {type: 'text/plain'});
-  const file = new File([blob], 'RVHabit_Biblioteca.rvhabit', {type: 'text/plain'});
-
-  // Al móvil no hi ha accés directe al sistema de fitxers de la Synology.
-  // El "Compartir" natiu d'iOS (Fitxers → desar a la carpeta) sí permet
-  // triar "Reemplaça" quan ja existeix un fitxer amb el mateix nom.
-  // L'enllaç de descàrrega clàssic (<a download>) NO ho permet: iOS sempre
-  // crea una còpia nova amb "(1)", "(2)"... en lloc de sobreescriure.
-  // NOTA: no confiem en navigator.canShare() — en alguns iOS retorna false
-  // per a fitxers binaris sense motiu real i ens privaria d'intentar-ho.
-  if (typeof navigator.share === 'function') {
-    try {
-      await navigator.share({
-        files: [file],
-        title: 'RVHabit_Biblioteca.rvhabit'
-      });
-      setSyncStatus('ok', '✅ Desat — si t\'ha demanat "Reemplaça", confirma-ho');
-      showToast('✓ Tria "Desar a Fitxers" → la carpeta de la Synology → Reemplaça', 'success');
-      return;
-    } catch (err) {
-      if (err && err.name === 'AbortError') { showToast('Desament cancel·lat', ''); return; }
-      // Si el Compartir falla per algun motiu, cau a la descàrrega clàssica.
-    }
-  }
-
+  const blob = new Blob([payload], {type: 'application/octet-stream'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -1587,8 +1515,8 @@ async function desarASynology() {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 
-  setSyncStatus('warn', '⚠️ Descarregat — esborra les còpies "(1)", "(2)"... i deixa només l\'original a la Synology');
-  showToast('✓ Fitxer descarregat — compte amb les còpies duplicades', 'success');
+  setSyncStatus('ok', `✅ Fitxer generat — desa'l sobre l'original a la Synology`);
+  showToast('✓ Fitxer generat — sobreescriu el de la Synology', 'success');
 }
 
 function setSyncStatus(type, text) {
