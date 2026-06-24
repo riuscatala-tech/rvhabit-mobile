@@ -669,6 +669,15 @@ function tryParseJSON(str) {
   try { return str ? JSON.parse(str) : null; } catch(e) { return null; }
 }
 
+// Funcions de compatibilitat (xifrat eliminat)
+function isEncryptedEnvelopeWeb(obj) { return false; }
+async function encryptStringWeb(text, pass) { return text; }
+async function decryptStringWeb(text, pass) { return text; }
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
 // ═══════════════════════
 //  PWA SETUP
 // ═══════════════════════
