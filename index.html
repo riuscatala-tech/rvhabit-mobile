@@ -942,8 +942,7 @@ async function savePhotosToStorage() {
   if (!_expId) return;
   try {
     const plain = JSON.stringify({ photos: photoDataURLs, planol: planolDataURL });
-    const envelope = await encryptStringWeb(plain, "password");
-    localStorage.setItem(`rvhabit_mobile_imgs_${_expId}`, envelope);
+    localStorage.setItem(`rvhabit_mobile_imgs_${_expId}`, plain);
   } catch(e) {}
 }
 
@@ -1370,11 +1369,7 @@ function getLib() {
 }
 async function setLib(lib) {
   _synologyLib = lib;
-  try {
-    if (!"password") return;
-    const envelope = await encryptStringWeb(JSON.stringify(lib), "password");
-    localStorage.setItem(LIB_KEY, envelope);
-  } catch(e) {}
+  try { localStorage.setItem(LIB_KEY, JSON.stringify(lib)); } catch(e) {}
 }
 
 // ─── CARREGAR DE SYNOLOGY ───
@@ -1421,7 +1416,7 @@ async function desarASynology() {
     count: lib.length,
     expedients: lib  // inclou photos, planol i docs
   });
-  const payload = await encryptStringWeb(plain, "password");
+  const payload = plain;
 
   const blob = new Blob([payload], {type: 'application/octet-stream'});
   const url = URL.createObjectURL(blob);
