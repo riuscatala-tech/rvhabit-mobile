@@ -370,7 +370,7 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
   <div class="header-logo">RV<span>Habit</span></div>
   <div style="font-size:10px;opacity:0.7;letter-spacing:1px;">MÒBIL</div>
   <div class="header-exp" id="headerExp">Nou expedient</div>
-  <button onclick="lockApp()" title="Bloquejar"
+  <button style="display:none" onclick="lockApp()" title="Bloquejar"
     style="background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.25); color:white;
            border-radius:6px; padding:5px 8px; font-size:13px; margin-left:8px;">🔒</button>
 </header>
@@ -653,10 +653,7 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
 </div>
 
 <!-- MODAL: CONTRASENYA (xifratge de les dades) -->
-<div id="passphrase-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:2000; align-items:center; justify-content:center; padding:20px;">
-  <div style="background:white; border-radius:14px; padding:24px; width:100%; max-width:340px; box-shadow:0 8px 30px rgba(0,0,0,0.3);">
-    <div id="pp-title" style="font-size:18px; font-weight:700; color:var(--accent); margin-bottom:10px;">Contrasenya</div>
-    <div id="pp-sub" style="font-size:12px; color:var(--muted); margin-bottom:14px; line-height:1.5;">Introdueix la contrasenya per desxifrar les dades.</div>
+<div id="pp-sub" style="font-size:12px; color:var(--muted); margin-bottom:14px; line-height:1.5;">Introdueix la contrasenya per desxifrar les dades.</div>
     <input type="password" id="pp-input" placeholder="Contrasenya" autocomplete="off"
       style="width:100%; padding:11px 12px; border:1px solid var(--border); border-radius:8px; margin-bottom:10px; font-size:15px;">
     <input type="password" id="pp-input2" placeholder="Repeteix la contrasenya" autocomplete="off"
@@ -692,7 +689,6 @@ function escapeHtml(str) {
 }
 
 const PBKDF2_ITERATIONS = 200000;
-let _passphrase = null; // només en memòria, mai es desa al disc
 
 function b64FromBytes(bytes) {
   let bin = '';
@@ -712,95 +708,6 @@ async function deriveKeyWeb(passphrase, saltB64) {
   return { key, salt };
 }
 
-async function encryptStringWeb(plaintext, passphrase) {
-  const { key, salt } = await deriveKeyWeb(passphrase, null);
-  const iv = crypto.getRandomValues(new Uint8Array(12));
-  const ciphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, new TextEncoder().encode(plaintext));
-  return JSON.stringify({
-    rvhabitEncrypted: true, v: 1, kdf: 'pbkdf2', iterations: PBKDF2_ITERATIONS,
-    salt: b64FromBytes(salt), iv: b64FromBytes(iv), ciphertext: b64FromBytes(ciphertext)
-  });
-}
-
-async function decryptStringWeb(envelopeJson, passphrase) {
-  const env = JSON.parse(envelopeJson);
-  const { key } = await deriveKeyWeb(passphrase, env.salt);
-  const dec = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: bytesFromB64(env.iv) }, key, bytesFromB64(env.ciphertext));
-  return new TextDecoder().decode(dec);
-}
-
-function isEncryptedEnvelopeWeb(obj) {
-  return !!(obj && obj.rvhabitEncrypted === true && obj.salt && obj.iv && obj.ciphertext);
-}
-function tryParseJSON(str) { try { return JSON.parse(str); } catch (e) { return null; } }
-
-// ── Modal de contrasenya ──
-let _ppResolve = null;
-function askPassphrase({ mode }) {
-  return new Promise(resolve => {
-    _ppResolve = resolve;
-    const overlay = document.getElementById('passphrase-overlay');
-    const title = document.getElementById('pp-title');
-    const sub = document.getElementById('pp-sub');
-    const input1 = document.getElementById('pp-input');
-    const input2 = document.getElementById('pp-input2');
-    const err = document.getElementById('pp-error');
-    err.style.display = 'none'; input1.value = ''; input2.value = '';
-    if (mode === 'create') {
-      title.textContent = 'Crea la contrasenya';
-      sub.textContent = 'Protegirà les dades dels clients en aquest mòbil. Guarda-la en un lloc segur: si la perds, no es podran recuperar les dades.';
-      input2.style.display = 'block';
-    } else if (mode === 'wrong') {
-      title.textContent = 'Contrasenya incorrecta';
-      sub.textContent = 'Torna-ho a provar.';
-      input2.style.display = 'none';
-    } else {
-      title.textContent = 'Contrasenya';
-      sub.textContent = 'Introdueix la contrasenya per desxifrar les dades.';
-      input2.style.display = 'none';
-    }
-    overlay.style.display = 'flex';
-    setTimeout(() => input1.focus(), 50);
-  });
-}
-function submitPassphrase() {
-  const p1 = document.getElementById('pp-input').value;
-  const p2 = document.getElementById('pp-input2').value;
-  const isCreate = document.getElementById('pp-input2').style.display !== 'none';
-  const err = document.getElementById('pp-error');
-  if (!p1 || p1.length < 4) { err.textContent = 'Mínim 4 caràcters.'; err.style.display = 'block'; return; }
-  if (isCreate && p1 !== p2) { err.textContent = 'Les contrasenyes no coincideixen.'; err.style.display = 'block'; return; }
-  document.getElementById('passphrase-overlay').style.display = 'none';
-  if (_ppResolve) { const r = _ppResolve; _ppResolve = null; r(p1); }
-}
-document.getElementById('pp-submit').addEventListener('click', submitPassphrase);
-
-// Assegura que tenim una contrasenya abans de llegir/escriure dades sensibles.
-// Si ja hi ha dades xifrades desades (LIB_KEY o el draft), demana desbloquejar;
-// si no n'hi ha cap encara (primer ús, o dades antigues sense xifrar), demana crear-ne.
-async function ensurePassphrase() {
-  if (_passphrase) return _passphrase;
-  const rawLib = localStorage.getItem('rvhabit_mobile_lib');
-  const rawDraft = localStorage.getItem('rvhabit_mobile_draft');
-  const libParsed = rawLib ? tryParseJSON(rawLib) : null;
-  const draftParsed = rawDraft ? tryParseJSON(rawDraft) : null;
-  const hasEncrypted = isEncryptedEnvelopeWeb(libParsed) || isEncryptedEnvelopeWeb(draftParsed);
-  const hasLegacyPlain = (rawLib && !hasEncrypted) || (rawDraft && !hasEncrypted);
-  let mode = hasEncrypted ? 'unlock' : 'create';
-  for (let attempts = 0; attempts < 6; attempts++) {
-    const pass = await askPassphrase({ mode });
-    if (mode !== 'unlock') { _passphrase = pass; return _passphrase; }
-    // Mode 'unlock': verificar contra el que tinguem xifrat
-    try {
-      if (isEncryptedEnvelopeWeb(libParsed)) await decryptStringWeb(rawLib, pass);
-      else if (isEncryptedEnvelopeWeb(draftParsed)) await decryptStringWeb(rawDraft, pass);
-      _passphrase = pass;
-      return _passphrase;
-    } catch (e) { mode = 'wrong'; }
-  }
-  return null;
-}
-function lockApp() { _passphrase = null; location.reload(); }
 
 // ═══════════════════════
 //  STATE
@@ -825,8 +732,6 @@ const DOC_ICONS = { certificat:'📄', fotografies:'📷', planol:'🗺️', esc
 document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('rep_data').value = new Date().toISOString().split('T')[0];
   renderDocSlots();
-  const pass = await ensurePassphrase();
-  if (!pass) { showToast('⚠ Cal una contrasenya per continuar', 'error'); return; }
   await loadDraft();
   await initSync();
 });
@@ -909,10 +814,9 @@ function fillData(d) {
 // ═══════════════════════
 async function autoSave() {
   try {
-    if (!_passphrase) return;
+    if (!"password") return;
     const plain = JSON.stringify({ data: collectData(), expId: _expId });
-    const envelope = await encryptStringWeb(plain, _passphrase);
-    localStorage.setItem('rvhabit_mobile_draft', envelope);
+    localStorage.setItem('rvhabit_mobile_draft', plain);
   } catch(e) {}
   updateNavBadges();
 }
@@ -922,7 +826,7 @@ async function loadDraft() {
   if (!raw) return;
   try {
     const parsed = tryParseJSON(raw);
-    const plain = isEncryptedEnvelopeWeb(parsed) ? await decryptStringWeb(raw, _passphrase) : raw;
+    const plain = raw;
     const saved = JSON.parse(plain);
     if (saved.data) fillData(saved.data);
     if (saved.expId) _expId = saved.expId;
@@ -1021,10 +925,10 @@ function loadPlanol(event) {
 }
 
 async function savePhotosToStorage() {
-  if (!_expId || !_passphrase) return;
+  if (!_expId) return;
   try {
     const plain = JSON.stringify({ photos: photoDataURLs, planol: planolDataURL });
-    const envelope = await encryptStringWeb(plain, _passphrase);
+    const envelope = await encryptStringWeb(plain, "password");
     localStorage.setItem(`rvhabit_mobile_imgs_${_expId}`, envelope);
   } catch(e) {}
 }
@@ -1035,7 +939,7 @@ async function loadPhotosFromStorage(id) {
     const raw = localStorage.getItem(`rvhabit_mobile_imgs_${id}`);
     if (!raw) return;
     const parsed = tryParseJSON(raw);
-    const plain = isEncryptedEnvelopeWeb(parsed) ? await decryptStringWeb(raw, _passphrase) : raw;
+    const plain = raw;
     const saved = JSON.parse(plain);
     if (saved.photos) {
       photoDataURLs = saved.photos;
@@ -1453,8 +1357,8 @@ function getLib() {
 async function setLib(lib) {
   _synologyLib = lib;
   try {
-    if (!_passphrase) return;
-    const envelope = await encryptStringWeb(JSON.stringify(lib), _passphrase);
+    if (!"password") return;
+    const envelope = await encryptStringWeb(JSON.stringify(lib), "password");
     localStorage.setItem(LIB_KEY, envelope);
   } catch(e) {}
 }
@@ -1470,8 +1374,8 @@ function carregarDeSynology(event) {
       const parsed = tryParseJSON(raw);
       let payload;
       if (isEncryptedEnvelopeWeb(parsed)) {
-        if (!_passphrase) { showToast('⚠ Cal desbloquejar abans de carregar', 'error'); return; }
-        try { payload = JSON.parse(await decryptStringWeb(raw, _passphrase)); }
+        if (!"password") { showToast('⚠ Cal desbloquejar abans de carregar', 'error'); return; }
+        try { payload = JSON.parse(await decryptStringWeb(raw, "password")); }
         catch(e2) { showToast('⚠ Contrasenya incorrecta per a aquest fitxer', 'error'); return; }
       } else {
         payload = parsed; // fitxer antic sense xifrar
@@ -1492,7 +1396,7 @@ function carregarDeSynology(event) {
 async function desarASynology() {
   const lib = getLib();
   if (!lib.length) { showToast('⚠ No hi ha expedients per desar', 'error'); return; }
-  if (!_passphrase) { showToast('⚠ Cal desbloquejar abans de desar', 'error'); return; }
+  if (!"password") { showToast('⚠ Cal desbloquejar abans de desar', 'error'); return; }
   showToast('Preparant fitxer...', '');
   await new Promise(r => setTimeout(r, 100));
 
@@ -1503,7 +1407,7 @@ async function desarASynology() {
     count: lib.length,
     expedients: lib  // inclou photos, planol i docs
   });
-  const payload = await encryptStringWeb(plain, _passphrase);
+  const payload = await encryptStringWeb(plain, "password");
 
   const blob = new Blob([payload], {type: 'application/octet-stream'});
   const url = URL.createObjectURL(blob);
@@ -1533,7 +1437,7 @@ function setSyncStatus(type, text) {
 async function saveExp() {
   const data = collectData();
   if (!data.sol_nom) { showToast('⚠ Introdueix el nom del sol·licitant', 'error'); return; }
-  if (!_passphrase) { showToast('⚠ Cal desbloquejar abans de desar — recarrega l\'app', 'error'); return; }
+  if (!"password") { showToast('⚠ Cal desbloquejar abans de desar — recarrega l\'app', 'error'); return; }
   const lib = getLib();
   const id = _expId || Date.now();
   _expId = id;
@@ -1667,7 +1571,7 @@ async function initSync() {
     if (!raw) return;
     const parsed = tryParseJSON(raw);
     const localLib = isEncryptedEnvelopeWeb(parsed)
-      ? JSON.parse(await decryptStringWeb(raw, _passphrase))
+      ? JSON.parse(await decryptStringWeb(raw, "password"))
       : (parsed || []);
     if (localLib.length) {
       _synologyLib = localLib;
