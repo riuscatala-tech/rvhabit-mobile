@@ -808,6 +808,7 @@ function lockApp() { _passphrase = null; location.reload(); }
 let photoDataURLs = [null,null,null,null];
 let planolDataURL = null;
 let _expId = null;
+let _synologyLib = null;
 let docAttachments = { certificat:null, fotografies:null, planol:null, escriptura:null, factura:null, cedula:null };
 
 const DOC_LABELS = {
@@ -1444,7 +1445,6 @@ async function genAll() {
 const LIB_KEY = 'rvhabit_mobile_lib';
 
 // ─── Biblioteca en memòria (carregada de Synology) ───
-let _synologyLib = null; // biblioteca completa carregada
 
 function getLib() {
   // Prioritat: biblioteca de Synology > localStorage (ja desxifrada a memòria)
