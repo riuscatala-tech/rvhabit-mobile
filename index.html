@@ -664,6 +664,10 @@ select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
 </div>
 
 <script>
+function tryParseJSON(str) {
+  try { return str ? JSON.parse(str) : null; } catch(e) { return null; }
+}
+
 // ═══════════════════════
 //  PWA SETUP
 // ═══════════════════════
